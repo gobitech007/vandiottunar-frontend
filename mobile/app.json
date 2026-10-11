@@ -1,0 +1,56 @@
+{
+  "expo": {
+    "name": "Vandi Ottunar Driver",
+    "slug": "vandiottunar-driver",
+    "scheme": "vandiottunar",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#F7F1E3"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "in.vandiottunar.driver"
+    },
+    "android": {
+      "package": "in.vandiottunar.driver",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#0E3B2E",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
+      "predictiveBackGestureEnabled": false
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Vandi Ottunar uses your location to find customers and driver jobs near you.",
+          "isAndroidBackgroundLocationEnabled": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Vandi Ottunar needs the camera to photograph your driving licence, ID and selfie for verification.",
+          "photosPermission": "Vandi Ottunar needs your photos to upload licence and ID images you already have.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true,
+          "faceIDPermission": false
+        }
+      ]
+    ]
+  }
+}
