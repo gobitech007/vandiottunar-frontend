@@ -54,7 +54,7 @@ export default function DriverDetail() {
   if (!driver) {
     return (
       <div className="page">
-        <Link to="/drivers">← All drivers</Link>
+        <Link to="/admin/drivers">← All drivers</Link>
         {error ? <p className="error">{error}</p> : <p>Loading…</p>}
       </div>
     )
@@ -65,7 +65,7 @@ export default function DriverDetail() {
 
   return (
     <div className="page">
-      <Link to={`/drivers?status=${driver.status}`}>← All drivers</Link>
+      <Link to={`/admin/drivers?status=${driver.status}`}>← All drivers</Link>
       <header className="page-head">
         <div>
           <h1>{driver.full_name ?? 'Unnamed driver'}</h1>

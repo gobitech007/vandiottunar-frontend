@@ -1,0 +1,321 @@
+import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+
+const en = {
+  brand: 'Vandi Ottunar',
+  brandAlt: 'வண்டி ஓட்டுநர்',
+  heroTitle: 'Trusted drivers, one call away',
+  heroBody:
+    'Hire a verified driver for your own car — by the hour, by the day, or for outstation trips. Businesses can hire permanent drivers too.',
+  needDriver: 'I need a driver',
+  needDriverBody: 'Car owners and businesses — register to book a driver or hire a full-time one.',
+  registerCustomer: 'Register as customer',
+  amDriver: 'I am a driver',
+  amDriverBody: 'Register from your phone or computer, upload your licence, and get trips and jobs near you.',
+  registerDriver: 'Register as driver',
+  trust1: 'Licence & police verified drivers',
+  trust2: 'Hourly · Daily · Outstation · Permanent',
+  trust3: 'Starting in Coimbatore',
+  adminLink: 'Admin',
+  home: 'Home',
+  signOut: 'Sign out',
+
+  // OTP
+  phoneLabel: 'Mobile number',
+  sendCode: 'Send OTP',
+  codeLabel: (phone: string) => `Enter the 6-digit code sent to ${phone}`,
+  verify: 'Verify',
+  changeNumber: 'Change number',
+  resendIn: (s: number) => `Resend in ${s}s`,
+  resend: 'Resend code',
+  devCode: 'Development code',
+  wrongRole: (role: string) =>
+    `This mobile number is already registered as ${role}. Sign out and use a different number, or continue on the right page.`,
+  goToRightPage: 'Go to my page',
+
+  // Driver flow
+  driverTitle: 'Driver registration',
+  hubTitle: 'Complete your registration',
+  stepConsent: 'Privacy notice',
+  stepProfile: 'Your details',
+  stepLocation: 'Your location',
+  stepDocuments: 'Documents',
+  done: 'Done',
+  todo: 'To do',
+  continue: 'Continue',
+  submit: 'Submit for verification',
+  rejectedTitle: 'Please fix and resubmit',
+  save: 'Save',
+  back: 'Back',
+  consentTitle: 'Your data, your safety',
+  consentPoints: [
+    'What we collect: name, phone, photo, driving licence, ID proof, and your location while you are online.',
+    'Why: to verify you, match you with nearby customers, and keep every trip safe.',
+    'Who sees it: during a trip, customers see only your name, photo, rating and location. We never sell your data.',
+    'Verification: police and document checks are required before your first trip.',
+    'Trips: take car photos at the start and end. You are responsible for damage caused by careless or rule-breaking driving.',
+    'Conduct: drinking, rash driving or misbehaviour means your account is blocked.',
+    'Your rights: ask us anytime to see, correct or delete your data at support@vandiottunar.in.',
+  ],
+  agree: 'I agree to the Terms and Privacy Policy',
+  fullName: 'Full name (as on licence)',
+  licenceNumber: 'Driving licence number',
+  experience: 'Years of driving experience',
+  vehicles: 'Vehicles you can drive',
+  availability: 'When can you work?',
+  workPrefs: 'What work do you want?',
+  expectedPay: 'Expected pay (optional)',
+  useMyLocation: 'Use my current location',
+  locating: 'Finding your location…',
+  locationWhy: 'We use your location to find customers and jobs near you.',
+  locationDenied: 'Location permission is blocked. Allow location for this site in your browser settings, then try again.',
+  locationUnavailable: 'Could not get your location. Check that location is turned on and try again.',
+  locationInsecure: 'Location only works on a secure (https) site or on localhost.',
+  captured: (m: number) => `Location captured (±${m} m)`,
+  pincode: 'Pincode where you want to work',
+  area: 'Area / locality',
+  radius: 'How far can you travel?',
+  docTip: 'Place the card on a flat surface in good light. All text must be readable. Photos or PDF, up to 5 MB.',
+  choose: 'Upload',
+  replace: 'Replace',
+  uploaded: 'Uploaded',
+  uploading: 'Uploading…',
+  required: 'Required',
+  optional: 'Optional',
+  tooBig: 'This file is larger than 5 MB. Please choose a smaller one.',
+  submittedTitle: 'Application received',
+  submittedBody: 'We are checking your documents and police verification. We will update you by SMS or WhatsApp.',
+  approvedTitle: 'You are approved!',
+  approvedBody: 'You will start getting trips and jobs near you soon.',
+  suspendedTitle: 'Account on hold',
+  contact: 'Need help? support@vandiottunar.in',
+  refresh: 'Refresh',
+  getApp: 'Tip: the Vandi Ottunar driver app makes taking document photos easier.',
+
+  // Customer flow
+  customerTitle: 'Customer registration',
+  whoAreYou: 'Who are you?',
+  carOwner: 'Car owner',
+  carOwnerBody: 'I want a driver for my own car — hourly, daily or outstation.',
+  business: 'Business / employer',
+  businessBody: 'I want to hire permanent drivers for my company or household.',
+  yourName: 'Your name',
+  email: 'Email (optional)',
+  companyName: 'Company / business name',
+  yourPincode: 'Your pincode',
+  yourArea: 'Area / locality',
+  needs: 'What do you need?',
+  vehicleNote: 'Your vehicle (optional)',
+  vehicleNotePh: 'e.g. Innova, automatic',
+  register: 'Complete registration',
+  customerDoneTitle: 'You are registered!',
+  customerDoneBody:
+    'Booking drivers opens soon in Coimbatore. We will message you as soon as it is live. You can update your details any time.',
+  editDetails: 'Edit my details',
+
+  labels: {
+    car_manual: 'Car (manual)',
+    car_automatic: 'Car (automatic)',
+    suv: 'SUV',
+    van: 'Van',
+    light_commercial: 'Light goods vehicle',
+    heavy_vehicle: 'Heavy vehicle',
+    full_time: 'Full time',
+    part_time: 'Part time',
+    weekends: 'Weekends',
+    on_demand: 'Trips (hourly / daily / outstation)',
+    job: 'Permanent driver job',
+    licence_front: 'Licence — front',
+    licence_back: 'Licence — back',
+    id_proof: 'Aadhaar or other ID',
+    address_proof: 'Address proof',
+    selfie: 'Your photo (selfie)',
+    driver: 'a driver',
+    customer: 'a customer',
+    employer: 'a business',
+    admin: 'an admin',
+  } as Record<string, string>,
+  needLabels: {
+    on_demand: 'Driver for trips (hourly / daily / outstation)',
+    job: 'Permanent / full-time driver',
+  } as Record<string, string>,
+}
+
+export type Strings = typeof en
+
+const ta: Strings = {
+  brand: 'வண்டி ஓட்டுநர்',
+  brandAlt: 'Vandi Ottunar',
+  heroTitle: 'நம்பகமான டிரைவர், ஒரே அழைப்பில்',
+  heroBody:
+    'உங்கள் காருக்கு சரிபார்க்கப்பட்ட டிரைவர் — மணி நேரம், நாள் முழுவதும் அல்லது வெளியூர் பயணத்துக்கு. நிறுவனங்கள் நிரந்தர டிரைவர்களையும் நியமிக்கலாம்.',
+  needDriver: 'எனக்கு டிரைவர் வேண்டும்',
+  needDriverBody: 'கார் உரிமையாளர்கள் மற்றும் நிறுவனங்கள் — டிரைவரை புக் செய்ய அல்லது முழு நேர டிரைவரை நியமிக்க பதிவு செய்யுங்கள்.',
+  registerCustomer: 'வாடிக்கையாளராகப் பதிவு செய்',
+  amDriver: 'நான் ஒரு டிரைவர்',
+  amDriverBody: 'போன் அல்லது கணினியில் பதிவு செய்து, உரிமத்தைப் பதிவேற்றி, அருகிலுள்ள பயணங்களையும் வேலைகளையும் பெறுங்கள்.',
+  registerDriver: 'டிரைவராகப் பதிவு செய்',
+  trust1: 'உரிமம் & காவல்துறை சரிபார்த்த டிரைவர்கள்',
+  trust2: 'மணி · நாள் · வெளியூர் · நிரந்தரம்',
+  trust3: 'கோவையில் தொடக்கம்',
+  adminLink: 'நிர்வாகம்',
+  home: 'முகப்பு',
+  signOut: 'வெளியேறு',
+
+  phoneLabel: 'மொபைல் எண்',
+  sendCode: 'OTP அனுப்பு',
+  codeLabel: (phone) => `${phone} எண்ணுக்கு அனுப்பிய 6 இலக்க குறியீட்டை உள்ளிடுங்கள்`,
+  verify: 'சரிபார்',
+  changeNumber: 'எண்ணை மாற்று',
+  resendIn: (s) => `${s} வினாடியில் மீண்டும் அனுப்பலாம்`,
+  resend: 'மீண்டும் அனுப்பு',
+  devCode: 'டெவலப்மென்ட் குறியீடு',
+  wrongRole: (role) =>
+    `இந்த மொபைல் எண் ஏற்கனவே ${role} ஆகப் பதிவு செய்யப்பட்டுள்ளது. வெளியேறி வேறு எண்ணைப் பயன்படுத்துங்கள், அல்லது சரியான பக்கத்தில் தொடருங்கள்.`,
+  goToRightPage: 'என் பக்கத்துக்குச் செல்',
+
+  driverTitle: 'டிரைவர் பதிவு',
+  hubTitle: 'உங்கள் பதிவை முடிக்கவும்',
+  stepConsent: 'தனியுரிமை அறிவிப்பு',
+  stepProfile: 'உங்கள் விவரங்கள்',
+  stepLocation: 'உங்கள் இருப்பிடம்',
+  stepDocuments: 'ஆவணங்கள்',
+  done: 'முடிந்தது',
+  todo: 'செய்ய வேண்டியது',
+  continue: 'தொடரவும்',
+  submit: 'சரிபார்ப்புக்குச் சமர்ப்பி',
+  rejectedTitle: 'திருத்தி மீண்டும் சமர்ப்பிக்கவும்',
+  save: 'சேமி',
+  back: 'பின்செல்',
+  consentTitle: 'உங்கள் தகவல், உங்கள் பாதுகாப்பு',
+  consentPoints: [
+    'நாங்கள் சேகரிப்பவை: பெயர், மொபைல் எண், புகைப்படம், ஓட்டுநர் உரிமம், அடையாளச் சான்று, நீங்கள் ஆன்லைனில் இருக்கும்போது உங்கள் இருப்பிடம்.',
+    'ஏன்: உங்களைச் சரிபார்க்க, அருகிலுள்ள வாடிக்கையாளர்களுடன் இணைக்க, ஒவ்வொரு பயணத்தையும் பாதுகாப்பாக்க.',
+    'யார் பார்ப்பார்கள்: பயணத்தின்போது மட்டும் வாடிக்கையாளருக்கு உங்கள் பெயர், புகைப்படம், மதிப்பீடு, இருப்பிடம் தெரியும். உங்கள் தகவலை நாங்கள் ஒருபோதும் விற்பதில்லை.',
+    'சரிபார்ப்பு: முதல் பயணத்துக்கு முன் காவல்துறை மற்றும் ஆவணச் சரிபார்ப்பு அவசியம்.',
+    'பயணம்: தொடக்கத்திலும் முடிவிலும் காரின் புகைப்படங்கள் எடுக்கவும். கவனக்குறைவான ஓட்டுதலால் ஏற்படும் சேதத்துக்கு நீங்களே பொறுப்பு.',
+    'நடத்தை: மது அருந்துதல், அலட்சியமான ஓட்டுதல், தவறான நடத்தை இருந்தால் கணக்கு முடக்கப்படும்.',
+    'உங்கள் உரிமை: உங்கள் தகவலைப் பார்க்க, திருத்த அல்லது நீக்க எப்போது வேண்டுமானாலும் support@vandiottunar.in முகவரியில் கேளுங்கள்.',
+  ],
+  agree: 'நான் விதிமுறைகள் மற்றும் தனியுரிமைக் கொள்கையை ஒப்புக்கொள்கிறேன்',
+  fullName: 'முழுப் பெயர் (உரிமத்தில் உள்ளபடி)',
+  licenceNumber: 'ஓட்டுநர் உரிம எண்',
+  experience: 'ஓட்டுநர் அனுபவம் (ஆண்டுகள்)',
+  vehicles: 'நீங்கள் ஓட்டக்கூடிய வாகனங்கள்',
+  availability: 'எப்போது வேலை செய்ய முடியும்?',
+  workPrefs: 'எந்த வேலை வேண்டும்?',
+  expectedPay: 'எதிர்பார்க்கும் சம்பளம் (விருப்பம்)',
+  useMyLocation: 'என் தற்போதைய இருப்பிடத்தைப் பயன்படுத்து',
+  locating: 'உங்கள் இருப்பிடத்தைக் கண்டறிகிறது…',
+  locationWhy: 'அருகிலுள்ள வாடிக்கையாளர்களையும் வேலைகளையும் கண்டறிய உங்கள் இருப்பிடம் தேவை.',
+  locationDenied: 'இருப்பிட அனுமதி தடுக்கப்பட்டுள்ளது. உலாவி அமைப்புகளில் இந்தத் தளத்துக்கு இருப்பிடத்தை அனுமதித்து மீண்டும் முயலவும்.',
+  locationUnavailable: 'இருப்பிடத்தைப் பெற முடியவில்லை. இருப்பிடம் இயக்கத்தில் உள்ளதா எனச் சரிபார்த்து மீண்டும் முயலவும்.',
+  locationInsecure: 'இருப்பிடம் பாதுகாப்பான (https) தளத்தில் அல்லது localhost-இல் மட்டுமே வேலை செய்யும்.',
+  captured: (m) => `இருப்பிடம் பதிவானது (±${m} மீ)`,
+  pincode: 'நீங்கள் வேலை செய்ய விரும்பும் பகுதியின் பின்கோடு',
+  area: 'பகுதி',
+  radius: 'எவ்வளவு தூரம் பயணிக்க முடியும்?',
+  docTip: 'அட்டையை நல்ல வெளிச்சத்தில் சமமான இடத்தில் வைத்து எடுங்கள். எல்லா எழுத்துகளும் தெளிவாகத் தெரிய வேண்டும். புகைப்படம் அல்லது PDF, 5 MB வரை.',
+  choose: 'பதிவேற்று',
+  replace: 'மாற்று',
+  uploaded: 'பதிவேற்றப்பட்டது',
+  uploading: 'பதிவேற்றுகிறது…',
+  required: 'அவசியம்',
+  optional: 'விருப்பம்',
+  tooBig: 'இந்தக் கோப்பு 5 MB-க்கு மேல் உள்ளது. சிறிய கோப்பைத் தேர்வு செய்யுங்கள்.',
+  submittedTitle: 'விண்ணப்பம் பெறப்பட்டது',
+  submittedBody: 'உங்கள் ஆவணங்களும் காவல்துறை சரிபார்ப்பும் நடைபெறுகிறது. SMS அல்லது WhatsApp மூலம் தெரிவிப்போம்.',
+  approvedTitle: 'நீங்கள் அங்கீகரிக்கப்பட்டீர்கள்!',
+  approvedBody: 'விரைவில் அருகிலுள்ள பயணங்களும் வேலைகளும் கிடைக்கும்.',
+  suspendedTitle: 'கணக்கு நிறுத்தி வைக்கப்பட்டுள்ளது',
+  contact: 'உதவி வேண்டுமா? support@vandiottunar.in',
+  refresh: 'புதுப்பி',
+  getApp: 'குறிப்பு: வண்டி ஓட்டுநர் டிரைவர் செயலியில் ஆவணப் புகைப்படங்கள் எடுப்பது இன்னும் எளிது.',
+
+  customerTitle: 'வாடிக்கையாளர் பதிவு',
+  whoAreYou: 'நீங்கள் யார்?',
+  carOwner: 'கார் உரிமையாளர்',
+  carOwnerBody: 'என் காருக்கு டிரைவர் வேண்டும் — மணி நேரம், நாள் அல்லது வெளியூர்.',
+  business: 'நிறுவனம் / வேலை வழங்குபவர்',
+  businessBody: 'என் நிறுவனம் அல்லது வீட்டுக்கு நிரந்தர டிரைவர்கள் வேண்டும்.',
+  yourName: 'உங்கள் பெயர்',
+  email: 'மின்னஞ்சல் (விருப்பம்)',
+  companyName: 'நிறுவனத்தின் பெயர்',
+  yourPincode: 'உங்கள் பின்கோடு',
+  yourArea: 'பகுதி',
+  needs: 'உங்களுக்கு என்ன தேவை?',
+  vehicleNote: 'உங்கள் வாகனம் (விருப்பம்)',
+  vehicleNotePh: 'எ.கா. இன்னோவா, ஆட்டோமேட்டிக்',
+  register: 'பதிவை முடி',
+  customerDoneTitle: 'பதிவு முடிந்தது!',
+  customerDoneBody:
+    'கோவையில் டிரைவர் புக்கிங் விரைவில் தொடங்கும். தொடங்கியதும் உங்களுக்குத் தெரிவிப்போம். உங்கள் விவரங்களை எப்போது வேண்டுமானாலும் மாற்றலாம்.',
+  editDetails: 'என் விவரங்களை மாற்று',
+
+  labels: {
+    car_manual: 'கார் (மேனுவல்)',
+    car_automatic: 'கார் (ஆட்டோமேட்டிக்)',
+    suv: 'SUV',
+    van: 'வேன்',
+    light_commercial: 'சிறு சரக்கு வாகனம்',
+    heavy_vehicle: 'கனரக வாகனம்',
+    full_time: 'முழு நேரம்',
+    part_time: 'பகுதி நேரம்',
+    weekends: 'வார இறுதி',
+    on_demand: 'பயணங்கள் (மணி / நாள் / வெளியூர்)',
+    job: 'நிரந்தர டிரைவர் வேலை',
+    licence_front: 'உரிமம் — முன்பக்கம்',
+    licence_back: 'உரிமம் — பின்பக்கம்',
+    id_proof: 'ஆதார் அல்லது அடையாள அட்டை',
+    address_proof: 'முகவரிச் சான்று',
+    selfie: 'உங்கள் புகைப்படம் (செல்ஃபி)',
+    driver: 'டிரைவர்',
+    customer: 'வாடிக்கையாளர்',
+    employer: 'நிறுவனம்',
+    admin: 'நிர்வாகி',
+  },
+  needLabels: {
+    on_demand: 'பயணங்களுக்கு டிரைவர் (மணி / நாள் / வெளியூர்)',
+    job: 'நிரந்தர / முழு நேர டிரைவர்',
+  },
+}
+
+export const strings = { en, ta }
+export type Lang = keyof typeof strings
+
+const LANG_KEY = 'vo_lang'
+
+function initialLang(): Lang {
+  try {
+    return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'ta'
+  } catch {
+    return 'ta'
+  }
+}
+
+const LangContext = createContext<{ lang: Lang; t: Strings; setLang: (l: Lang) => void }>({
+  lang: 'ta',
+  t: ta,
+  setLang: () => {},
+})
+
+export function LangProvider({ children }: { children: ReactNode }) {
+  const [lang, setLangState] = useState<Lang>(initialLang)
+  const value = useMemo(
+    () => ({
+      lang,
+      t: strings[lang],
+      setLang: (l: Lang) => {
+        setLangState(l)
+        try {
+          localStorage.setItem(LANG_KEY, l)
+        } catch {
+          /* ignore */
+        }
+      },
+    }),
+    [lang],
+  )
+  return <LangContext.Provider value={value}>{children}</LangContext.Provider>
+}
+
+export const useT = () => useContext(LangContext)

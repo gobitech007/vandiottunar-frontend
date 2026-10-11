@@ -1,23 +1,46 @@
 export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
 
-const TOKEN_KEY = 'vo_admin_token'
+// Admin and public (driver/customer) sign-ins are kept separate, so testing one never logs out the other
+const ADMIN_KEY = 'vo_admin_token'
+const USER_KEY = 'vo_user_session'
 
-export function getToken(): string | null {
+export type UserRole = 'driver' | 'customer' | 'employer' | 'admin'
+export interface UserSession {
+  token: string
+  role: UserRole
+}
+
+function read(key: string): string | null {
   try {
-    return localStorage.getItem(TOKEN_KEY)
+    return localStorage.getItem(key)
   } catch {
     return null
   }
 }
 
-export function setToken(token: string | null): void {
+function write(key: string, value: string | null): void {
   try {
-    if (token) localStorage.setItem(TOKEN_KEY, token)
-    else localStorage.removeItem(TOKEN_KEY)
+    if (value) localStorage.setItem(key, value)
+    else localStorage.removeItem(key)
   } catch {
     /* storage unavailable — session lasts until reload */
   }
 }
+
+export const getToken = () => read(ADMIN_KEY)
+export const setToken = (token: string | null) => write(ADMIN_KEY, token)
+
+export function getUserSession(): UserSession | null {
+  const raw = read(USER_KEY)
+  if (!raw) return null
+  try {
+    return JSON.parse(raw) as UserSession
+  } catch {
+    return null
+  }
+}
+
+export const setUserSession = (session: UserSession | null) => write(USER_KEY, session ? JSON.stringify(session) : null)
 
 export class ApiError extends Error {
   status: number
@@ -37,25 +60,53 @@ function messageFrom(body: unknown, fallback: string): string {
   return fallback
 }
 
-export async function api<T>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
+interface RequestOptions {
+  method?: string
+  body?: unknown
+  form?: FormData
+  scope?: 'admin' | 'user'
+}
+
+async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const scope = options.scope ?? 'admin'
   const headers: Record<string, string> = {}
-  const token = getToken()
+  const token = scope === 'admin' ? getToken() : getUserSession()?.token
   if (token) headers.Authorization = `Bearer ${token}`
   if (options.body !== undefined) headers['Content-Type'] = 'application/json'
 
-  const res = await fetch(`${API_URL}${path}`, {
-    method: options.method ?? 'GET',
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  })
+  let res: Response
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method: options.method ?? (options.body !== undefined || options.form ? 'POST' : 'GET'),
+      headers,
+      body: options.form ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
+    })
+  } catch {
+    throw new ApiError(0, 'Could not reach the server. Check your internet connection and try again.')
+  }
   const text = await res.text()
-  const body: unknown = text ? JSON.parse(text) : null
+  let body: unknown = null
+  try {
+    body = text ? JSON.parse(text) : null
+  } catch {
+    body = null
+  }
   if (!res.ok) {
-    if (res.status === 401) setToken(null)
+    if (res.status === 401) {
+      if (scope === 'admin') setToken(null)
+      else setUserSession(null)
+    }
     throw new ApiError(res.status, messageFrom(body, `Request failed (${res.status})`))
   }
   return body as T
 }
+
+/** Admin panel calls */
+export const api = <T>(path: string, options: Omit<RequestOptions, 'scope'> = {}) => request<T>(path, options)
+
+/** Driver / customer calls from the public site */
+export const userApi = <T>(path: string, options: Omit<RequestOptions, 'scope'> = {}) =>
+  request<T>(path, { ...options, scope: 'user' })
 
 export type DriverStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'suspended'
 
@@ -134,4 +185,64 @@ export const label = (v: string) => LABELS[v] ?? v
 export function formatDate(iso: string | null): string {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+// ---- Public site (driver / customer registration) ----
+
+export type DocType = 'licence_front' | 'licence_back' | 'id_proof' | 'address_proof' | 'selfie'
+
+export interface DriverProfile {
+  id: string
+  full_name: string | null
+  preferred_language: 'ta' | 'en'
+  licence_number: string | null
+  experience_years: number | null
+  vehicle_types: string[]
+  availability: string | null
+  work_preferences: string[]
+  expected_pay_note: string | null
+  home_pincode: string | null
+  home_area: string | null
+  service_radius_km: number
+  registration_lat: number | null
+  registration_lng: number | null
+  status: DriverStatus
+  rejection_reason: string | null
+  police_verified: boolean
+}
+
+export interface Checklist {
+  profile_complete: boolean
+  location_captured: boolean
+  consent_accepted: boolean
+  missing_documents: DocType[]
+  missing_fields: string[]
+  ready_to_submit: boolean
+  current_consent_version: string
+}
+
+export interface DocumentInfo {
+  id: string
+  doc_type: DocType
+  content_type: string
+  uploaded_at: string
+}
+
+export interface CustomerProfile {
+  id: string
+  full_name: string | null
+  email: string | null
+  preferred_language: string
+  company_name: string | null
+  home_pincode: string | null
+  home_area: string | null
+  needs: string[]
+  vehicle_note: string | null
+  profile_complete: boolean
+  created_at: string
+}
+
+export interface AdminCustomer extends CustomerProfile {
+  phone: string
+  role: 'customer' | 'employer'
 }

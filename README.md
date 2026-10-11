@@ -4,7 +4,7 @@ Two apps that talk to [`vandiottunar-user-service`](https://github.com/gobitech0
 
 | Folder | App | Stack |
 |---|---|---|
-| `web/` | **Admin panel** — review driver applications, view documents, approve/reject | React 19 + Vite + TypeScript |
+| `web/` | **Public website** — home page with *Register as driver* / *Register as customer*, full registration in Tamil or English — plus the **admin panel** at `/admin` | React 19 + Vite + TypeScript |
 | `mobile/` | **Driver app (Android)** — register from anywhere: OTP, privacy notice, profile, GPS location, document photos | Expo SDK 57 + React Native + TypeScript |
 
 Both apps use the Vandi Ottunar look (green `#0E3B2E`, mustard `#F2B705`, cream `#F7F1E3`). The driver app is **Tamil first** with an English toggle.
@@ -19,7 +19,7 @@ docker compose up --build
 
 In development the OTP appears on screen ("Development code"), so no SMS account is needed.
 
-## Web admin
+## Website
 
 ```bash
 cd web
@@ -28,9 +28,22 @@ npm install
 npm run dev              # http://localhost:5173
 ```
 
-Sign in with a number listed in `ADMIN_PHONES`.
+| Page | What it does |
+|---|---|
+| `/` | Home page (Tamil / English) with **Register as customer** and **Register as driver** |
+| `/register/driver` | OTP → privacy notice → details → browser location → licence/ID/selfie upload (photos shrunk in the browser) → submit → status |
+| `/register/customer` | Choose *Car owner* or *Business* → OTP → name, pincode, needs (company for businesses) → done |
+| `/admin` | Admin panel: **Drivers** and **Customers** tabs |
 
-- **Waiting for review** tab lists submitted drivers, oldest work first
+A phone number belongs to one role: if a driver's number is used on the customer page (or the other way round), the page says so and links to the right one.
+
+Browser location only works on `https://` or `localhost`.
+
+### Admin panel
+
+Sign in at `/admin` with a number listed in `ADMIN_PHONES` in the API's `.env` (restart the API after changing it). Other numbers are refused.
+
+- **Waiting for review** tab lists submitted drivers, newest first
 - Driver page shows profile, registration GPS + work area on Google Maps, consent record and document photos
 - **Approve** is only possible after you tick *Police verification is complete*
 - **Reject** sends the reason to the driver, who can fix and resubmit

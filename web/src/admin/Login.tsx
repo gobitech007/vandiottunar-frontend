@@ -42,15 +42,18 @@ export default function Login() {
     setBusy(true)
     setError(null)
     try {
-      const res = await api<TokenOut>('/auth/otp/verify', { method: 'POST', body: { phone, code } })
-      if (res.role !== 'admin') {
-        setError('This number is not an admin account.')
-        return
-      }
+      const res = await api<TokenOut>('/auth/otp/verify', { method: 'POST', body: { phone, code, role: 'admin' } })
       setToken(res.access_token)
-      navigate('/drivers', { replace: true })
+      navigate('/admin/drivers', { replace: true })
     } catch (err) {
-      setError((err as Error).message)
+      const message = (err as Error).message
+      setError(message)
+      setCode('')
+      // A wrong digit can be retried; a used, expired or refused code needs a fresh one
+      if ((err as { status?: number }).status !== 400 || /expired|used/i.test(message)) {
+        setDevCode(null)
+        setStep('phone')
+      }
     } finally {
       setBusy(false)
     }

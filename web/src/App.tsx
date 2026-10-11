@@ -1,25 +1,34 @@
 import type { ReactNode } from 'react'
-import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import Customers from './admin/Customers'
+import DriverDetail from './admin/DriverDetail'
+import Drivers from './admin/Drivers'
+import Login from './admin/Login'
 import { getToken, setToken } from './api'
-import DriverDetail from './pages/DriverDetail'
-import Drivers from './pages/Drivers'
-import Login from './pages/Login'
+import { LangProvider } from './i18n'
+import CustomerRegister from './public/CustomerRegister'
+import DriverRegister from './public/DriverRegister'
+import Home from './public/Home'
 
-function Shell({ children }: { children: ReactNode }) {
+function AdminShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
-  if (!getToken()) return <Navigate to="/login" replace />
+  if (!getToken()) return <Navigate to="/admin/login" replace />
   return (
     <>
       <header className="topbar">
-        <Link to="/drivers" className="brand">
+        <Link to="/admin/drivers" className="brand">
           <span className="brand-en">Vandi Ottunar</span>
           <span className="brand-ta">Admin</span>
         </Link>
+        <nav className="admin-nav" aria-label="Admin">
+          <NavLink to="/admin/drivers">Drivers</NavLink>
+          <NavLink to="/admin/customers">Customers</NavLink>
+        </nav>
         <button
           className="btn link light"
           onClick={() => {
             setToken(null)
-            navigate('/login')
+            navigate('/admin/login')
           }}
         >
           Sign out
@@ -32,27 +41,48 @@ function Shell({ children }: { children: ReactNode }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          path="/drivers"
-          element={
-            <Shell>
-              <Drivers />
-            </Shell>
-          }
-        />
-        <Route
-          path="/drivers/:id"
-          element={
-            <Shell>
-              <DriverDetail />
-            </Shell>
-          }
-        />
-        <Route path="*" element={<Navigate to="/drivers" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <LangProvider>
+      <BrowserRouter>
+        <Routes>
+          {/* Public site */}
+          <Route path="/" element={<Home />} />
+          <Route path="/register/driver" element={<DriverRegister />} />
+          <Route path="/register/customer" element={<CustomerRegister />} />
+
+          {/* Admin panel */}
+          <Route path="/admin" element={<Navigate to="/admin/drivers" replace />} />
+          <Route path="/admin/login" element={<Login />} />
+          <Route
+            path="/admin/drivers"
+            element={
+              <AdminShell>
+                <Drivers />
+              </AdminShell>
+            }
+          />
+          <Route
+            path="/admin/drivers/:id"
+            element={
+              <AdminShell>
+                <DriverDetail />
+              </AdminShell>
+            }
+          />
+          <Route
+            path="/admin/customers"
+            element={
+              <AdminShell>
+                <Customers />
+              </AdminShell>
+            }
+          />
+
+          {/* Old admin links */}
+          <Route path="/login" element={<Navigate to="/admin/login" replace />} />
+          <Route path="/drivers/*" element={<Navigate to="/admin/drivers" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </LangProvider>
   )
 }

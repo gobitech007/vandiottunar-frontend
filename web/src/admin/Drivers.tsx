@@ -113,7 +113,7 @@ export default function Drivers() {
             {items.map((d) => (
               <tr key={d.id}>
                 <td>
-                  <Link to={`/drivers/${d.id}`}>{d.full_name ?? 'Not entered yet'}</Link>
+                  <Link to={`/admin/drivers/${d.id}`}>{d.full_name ?? 'Not entered yet'}</Link>
                 </td>
                 <td>{d.phone}</td>
                 <td>
