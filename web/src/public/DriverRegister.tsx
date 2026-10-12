@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import {
   ApiError,
+  DEFAULT_CODE,
+  LICENCE_GROUPS,
+  type LicenceGroup,
+  type ParsedLicence,
   getUserSession,
   setUserSession,
   userApi,
@@ -11,19 +16,20 @@ import {
   type UserSession,
 } from '../api'
 import { useT } from '../i18n'
+import { needsFirstDownload, readImageText } from './licenceOcr'
 import PhoneOtp from './PhoneOtp'
 import PublicShell from './PublicShell'
 import WrongRole from './WrongRole'
 
-type Step = 'consent' | 'profile' | 'location' | 'documents'
+type Step = 'consent' | 'profile' | 'licence' | 'location' | 'documents'
 
 const VEHICLES = ['car_manual', 'car_automatic', 'suv', 'van', 'light_commercial', 'heavy_vehicle']
 const AVAILABILITY = ['full_time', 'part_time', 'weekends']
 const WORK = ['on_demand', 'job']
 const RADII = [5, 10, 15, 25]
+const LICENCE_SIDES: DocType[] = ['licence_front', 'licence_back']
+// The licence photos are taken in the licence step; the rest here
 const DOCS: { type: DocType; required: boolean }[] = [
-  { type: 'licence_front', required: true },
-  { type: 'licence_back', required: true },
   { type: 'id_proof', required: true },
   { type: 'selfie', required: true },
   { type: 'address_proof', required: false },
@@ -76,17 +82,27 @@ export default function DriverRegister() {
   } else if (!profile || !checklist) {
     body = error ? <p className="error">{error}</p> : <p className="muted">…</p>
   } else if (!['draft', 'rejected'].includes(profile.status)) {
-    body = <DriverStatus profile={profile} onRefresh={load} />
+    // Submitted, approved or on hold: the dashboard shows the status and assigned customers
+    return <Navigate to="/dashboard" replace />
   } else if (step === 'consent') {
     body = <ConsentStep version={checklist.current_consent_version} onDone={finish} onBack={() => setStep(null)} />
   } else if (step === 'profile') {
     body = <ProfileStep profile={profile} onDone={finish} onBack={() => setStep(null)} />
+  } else if (step === 'licence') {
+    body = (
+      <LicenceStep
+        profile={profile}
+        serverOcr={checklist.server_ocr_available}
+        onDone={finish}
+        onBack={() => setStep(null)}
+      />
+    )
   } else if (step === 'location') {
     body = <LocationStep profile={profile} onDone={finish} onBack={() => setStep(null)} />
   } else if (step === 'documents') {
     body = <DocumentsStep onDone={finish} onBack={() => setStep(null)} />
   } else {
-    body = <Hub profile={profile} checklist={checklist} onOpen={setStep} onSubmitted={load} />
+    body = <Hub profile={profile} checklist={checklist} onOpen={setStep} />
   }
 
   return (
@@ -99,25 +115,22 @@ export default function DriverRegister() {
   )
 }
 
-function Hub({
-  profile,
-  checklist,
-  onOpen,
-  onSubmitted,
-}: {
-  profile: DriverProfile
-  checklist: Checklist
-  onOpen: (s: Step) => void
-  onSubmitted: () => void
-}) {
+function Hub({ profile, checklist, onOpen }: { profile: DriverProfile; checklist: Checklist; onOpen: (s: Step) => void }) {
   const { t } = useT()
+  const navigate = useNavigate()
+  const missing = checklist.missing_documents
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const steps: { key: Step; title: string; done: boolean }[] = [
     { key: 'consent', title: t.stepConsent, done: checklist.consent_accepted },
     { key: 'profile', title: t.stepProfile, done: checklist.profile_complete },
+    {
+      key: 'licence',
+      title: t.stepLicence,
+      done: checklist.licence_complete && !LICENCE_SIDES.some((d) => missing.includes(d)),
+    },
     { key: 'location', title: t.stepLocation, done: checklist.location_captured },
-    { key: 'documents', title: t.stepDocuments, done: checklist.missing_documents.length === 0 },
+    { key: 'documents', title: t.stepDocuments, done: !missing.some((d) => !LICENCE_SIDES.includes(d)) },
   ]
   const next = steps.find((s) => !s.done)
 
@@ -126,7 +139,7 @@ function Hub({
     setError(null)
     try {
       await userApi('/drivers/me/submit', { method: 'POST' })
-      onSubmitted()
+      navigate('/dashboard')
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -270,7 +283,6 @@ function ChipGroup({
 function ProfileStep({ profile, onDone, onBack }: { profile: DriverProfile; onDone: () => void; onBack: () => void }) {
   const { t, lang } = useT()
   const [fullName, setFullName] = useState(profile.full_name ?? '')
-  const [licence, setLicence] = useState(profile.licence_number ?? '')
   const [experience, setExperience] = useState(profile.experience_years?.toString() ?? '')
   const [vehicles, setVehicles] = useState(profile.vehicle_types)
   const [availability, setAvailability] = useState(profile.availability ? [profile.availability] : [])
@@ -281,7 +293,6 @@ function ProfileStep({ profile, onDone, onBack }: { profile: DriverProfile; onDo
 
   const complete =
     fullName.trim().length >= 2 &&
-    licence.trim().length >= 8 &&
     experience !== '' &&
     vehicles.length > 0 &&
     availability.length > 0 &&
@@ -297,7 +308,6 @@ function ProfileStep({ profile, onDone, onBack }: { profile: DriverProfile; onDo
         body: {
           full_name: fullName.trim(),
           preferred_language: lang,
-          licence_number: licence.trim(),
           experience_years: Number(experience),
           vehicle_types: vehicles,
           availability: availability[0],
@@ -318,14 +328,6 @@ function ProfileStep({ profile, onDone, onBack }: { profile: DriverProfile; onDo
       <form onSubmit={save}>
         <label htmlFor="name">{t.fullName}</label>
         <input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" maxLength={120} />
-        <label htmlFor="licence">{t.licenceNumber}</label>
-        <input
-          id="licence"
-          value={licence}
-          onChange={(e) => setLicence(e.target.value.toUpperCase())}
-          placeholder="TN38 20200001234"
-          maxLength={20}
-        />
         <label htmlFor="exp">{t.experience}</label>
         <input
           id="exp"
@@ -489,6 +491,15 @@ async function prepareFile(file: File): Promise<File> {
   }
 }
 
+async function uploadDocument(type: DocType, file: File, tooBig: string): Promise<File> {
+  const ready = await prepareFile(file)
+  if (ready.size > MAX_BYTES) throw new Error(tooBig)
+  const form = new FormData()
+  form.append('file', ready)
+  await userApi(`/drivers/me/documents/${type}`, { form })
+  return ready
+}
+
 function DocumentsStep({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
   const { t } = useT()
   const [uploaded, setUploaded] = useState<Set<DocType>>(new Set())
@@ -507,14 +518,7 @@ function DocumentsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
     setError(null)
     setWorking(type)
     try {
-      const ready = await prepareFile(file)
-      if (ready.size > MAX_BYTES) {
-        setError(t.tooBig)
-        return
-      }
-      const form = new FormData()
-      form.append('file', ready)
-      await userApi(`/drivers/me/documents/${type}`, { form })
+      await uploadDocument(type, file, t.tooBig)
       setUploaded((prev) => new Set(prev).add(type))
     } catch (err) {
       setError((err as Error).message)
@@ -575,24 +579,222 @@ function DocumentsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
   )
 }
 
-function DriverStatus({ profile, onRefresh }: { profile: DriverProfile; onRefresh: () => void }) {
+const GROUPS: LicenceGroup[] = ['two_wheeler', 'four_wheeler', 'heavy']
+const inGroup = (codes: string[], g: LicenceGroup) => codes.some((c) => (LICENCE_GROUPS[g] as readonly string[]).includes(c))
+
+function LicenceStep({
+  profile,
+  serverOcr,
+  onDone,
+  onBack,
+}: {
+  profile: DriverProfile
+  serverOcr: boolean
+  onDone: () => void
+  onBack: () => void
+}) {
   const { t } = useT()
-  const approved = profile.status === 'approved'
-  const suspended = profile.status === 'suspended'
+  const [uploaded, setUploaded] = useState<Set<DocType>>(new Set())
+  const [working, setWorking] = useState<DocType | null>(null)
+  const [reading, setReading] = useState(false)
+  const [readNote, setReadNote] = useState<string | null>(null)
+  const [readOk, setReadOk] = useState<boolean | null>(null)
+  const [number, setNumber] = useState(profile.licence_number ?? '')
+  const [codes, setCodes] = useState<string[]>(profile.licence_classes ?? [])
+  const [validTill, setValidTill] = useState(profile.licence_valid_till ?? '')
+  const [source, setSource] = useState<string>(profile.licence_source ?? 'manual')
+  const [rawText, setRawText] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  // Photos picked in this visit, kept for in-browser reading; text read from each side
+  const files = useRef<Partial<Record<DocType, File>>>({})
+  const texts = useRef<Partial<Record<DocType, string>>>({})
+  const typedNumber = useRef(Boolean(profile.licence_number))
+
+  useEffect(() => {
+    userApi<DocumentInfo[]>('/drivers/me/documents')
+      .then((docs) => setUploaded(new Set(docs.map((d) => d.doc_type).filter((d) => LICENCE_SIDES.includes(d)))))
+      .catch((err: Error) => setError(err.message))
+  }, [])
+
+  function apply(result: ParsedLicence, how: string, text: string | null) {
+    const found = Boolean(result.licence_number || result.classes.length)
+    if (result.licence_number && !typedNumber.current) setNumber(result.licence_number)
+    if (result.classes.length) setCodes((prev) => [...new Set([...prev, ...result.classes])])
+    if (result.valid_till) setValidTill(result.valid_till)
+    if (found) {
+      setSource(how)
+      setRawText(text)
+    }
+    setReadOk(found)
+  }
+
+  async function read() {
+    setReading(true)
+    setReadOk(null)
+    setReadNote(null)
+    try {
+      if (serverOcr) {
+        try {
+          const result = await userApi<ParsedLicence>('/drivers/me/licence/scan', { method: 'POST' })
+          apply(result, 'ocr_server', result.raw_text)
+          return
+        } catch {
+          // Server OCR failed: fall back to reading in this browser
+        }
+      }
+      const sides = LICENCE_SIDES.filter((s) => files.current[s] && texts.current[s] === undefined)
+      if (sides.length && needsFirstDownload()) setReadNote(t.firstLoad)
+      for (const side of sides) texts.current[side] = await readImageText(files.current[side]!)
+      const text = LICENCE_SIDES.map((s) => texts.current[s] ?? '').join('\n').trim()
+      if (!text) {
+        setReadOk(false)
+        return
+      }
+      const result = await userApi<ParsedLicence>('/drivers/me/licence/parse', { body: { text: text.slice(0, 8000) } })
+      apply(result, 'ocr_browser', text.slice(0, 4000))
+    } catch {
+      setReadOk(false)
+    } finally {
+      setReading(false)
+      setReadNote(null)
+    }
+  }
+
+  async function upload(side: DocType, file: File | undefined) {
+    if (!file) return
+    setError(null)
+    setReadOk(null) // the earlier result is out of date until this photo has been read
+    setWorking(side)
+    try {
+      files.current[side] = await uploadDocument(side, file, t.tooBig)
+      delete texts.current[side]
+      setUploaded((prev) => new Set(prev).add(side))
+    } catch (err) {
+      setError((err as Error).message)
+      return
+    } finally {
+      setWorking(null)
+    }
+    void read()
+  }
+
+  function toggleGroup(g: LicenceGroup) {
+    setCodes((prev) =>
+      inGroup(prev, g) ? prev.filter((c) => !(LICENCE_GROUPS[g] as readonly string[]).includes(c)) : [...prev, DEFAULT_CODE[g]],
+    )
+  }
+
+  async function save(e: FormEvent) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      await userApi('/drivers/me/licence', {
+        method: 'PUT',
+        body: { licence_number: number.trim(), classes: codes, valid_till: validTill || null, source, raw_text: rawText },
+      })
+      onDone()
+    } catch (err) {
+      setError((err as Error).message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const bothUploaded = LICENCE_SIDES.every((s) => uploaded.has(s))
+  const canSave = bothUploaded && number.replace(/[\s-]/g, '').length >= 8 && GROUPS.some((g) => inGroup(codes, g))
+
   return (
-    <section className={`card status-card ${approved ? 'is-ok' : suspended ? 'is-bad' : ''}`}>
-      <div className="status-icon" aria-hidden="true">
-        {approved ? '✓' : suspended ? '!' : '…'}
-      </div>
-      <h2>{approved ? t.approvedTitle : suspended ? t.suspendedTitle : t.submittedTitle}</h2>
-      {profile.full_name && <p className="strong">{profile.full_name}</p>}
-      <p>{approved ? t.approvedBody : suspended ? profile.rejection_reason : t.submittedBody}</p>
-      <p className="muted">{t.contact}</p>
-      {!approved && (
-        <button className="btn" onClick={onRefresh}>
-          {t.refresh}
-        </button>
+    <StepFrame title={t.stepLicence} onBack={onBack}>
+      <p>{t.licenceIntro}</p>
+      <ul className="doc-list">
+        {LICENCE_SIDES.map((side) => {
+          const done = uploaded.has(side)
+          const id = `doc-${side}`
+          return (
+            <li key={side} className={done ? 'done' : ''}>
+              <div>
+                <strong>{t.labels[side]}</strong>
+                <span className={done ? 'ok-text' : 'muted'}>
+                  {working === side ? t.uploading : done ? `✓ ${t.uploaded}` : t.required}
+                </span>
+              </div>
+              <label htmlFor={id} className={`btn ${done ? '' : 'primary'} ${working || reading ? 'disabled' : ''}`}>
+                {done ? t.replace : t.choose}
+              </label>
+              <input
+                id={id}
+                className="sr-only"
+                type="file"
+                accept="image/*,application/pdf"
+                capture="environment"
+                disabled={working !== null || reading}
+                onChange={(e) => {
+                  void upload(side, e.target.files?.[0])
+                  e.target.value = ''
+                }}
+              />
+            </li>
+          )
+        })}
+      </ul>
+
+      {reading && (
+        <p className="reading" role="status">
+          <span className="spinner" aria-hidden="true" /> {t.reading}
+          {readNote && <span className="muted"> {readNote}</span>}
+        </p>
       )}
-    </section>
+      {readOk === true && <p className="notice ok">{t.readDone}</p>}
+      {readOk === false && <p className="notice">{t.readFailed}</p>}
+
+      <form onSubmit={save}>
+        <label htmlFor="licence">{t.licenceNumber}</label>
+        <input
+          id="licence"
+          value={number}
+          onChange={(e) => {
+            typedNumber.current = true
+            setNumber(e.target.value.toUpperCase())
+          }}
+          placeholder="TN38 20200001234"
+          maxLength={20}
+          autoComplete="off"
+        />
+        <fieldset className="chips">
+          <legend>{t.licenceClasses}</legend>
+          {GROUPS.map((g) => (
+            <button
+              type="button"
+              key={g}
+              role="checkbox"
+              aria-checked={inGroup(codes, g)}
+              className={`chip ${inGroup(codes, g) ? 'on' : ''}`}
+              onClick={() => toggleGroup(g)}
+            >
+              {t.groupLabels[g]}
+            </button>
+          ))}
+        </fieldset>
+        {codes.length > 0 && <p className="hint">{t.readFrom(codes.join(', '))}</p>}
+        <label htmlFor="valid">{t.validTill}</label>
+        <input id="valid" type="date" value={validTill} onChange={(e) => setValidTill(e.target.value)} />
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        {!bothUploaded && <p className="hint">{t.uploadBothFirst}</p>}
+        <div className="row-between">
+          <button type="button" className="btn" onClick={() => void read()} disabled={!bothUploaded || reading}>
+            {t.readAgain}
+          </button>
+          <button className="btn primary" disabled={!canSave || busy || reading || working !== null}>
+            {t.save}
+          </button>
+        </div>
+      </form>
+    </StepFrame>
   )
 }

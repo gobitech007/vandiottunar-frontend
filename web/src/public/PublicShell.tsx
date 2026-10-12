@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getUserSession, setUserSession } from '../api'
 import { useT } from '../i18n'
 
@@ -21,6 +21,7 @@ export function LangToggle() {
 export default function PublicShell({ children }: { children: ReactNode }) {
   const { t } = useT()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const session = getUserSession()
 
   return (
@@ -32,7 +33,17 @@ export default function PublicShell({ children }: { children: ReactNode }) {
         </Link>
         <div className="public-bar-actions">
           <LangToggle />
-          {session && (
+          {!session && pathname !== '/login' && (
+            <Link className="btn link" to="/login">
+              {t.login}
+            </Link>
+          )}
+          {session && pathname !== '/dashboard' && (
+            <Link className="btn link" to="/dashboard">
+              {t.myDashboard}
+            </Link>
+          )}
+          {session && pathname === '/dashboard' && (
             <button
               className="btn link"
               onClick={() => {

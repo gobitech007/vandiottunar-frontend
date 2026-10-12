@@ -7,6 +7,7 @@ import { errorText, LangContext, strings, type Lang } from './src/i18n'
 import ConsentScreen from './src/screens/ConsentScreen'
 import DocumentsScreen from './src/screens/DocumentsScreen'
 import HubScreen, { type Step } from './src/screens/HubScreen'
+import LicenceScreen from './src/screens/LicenceScreen'
 import LocationScreen from './src/screens/LocationScreen'
 import LoginScreen from './src/screens/LoginScreen'
 import ProfileScreen from './src/screens/ProfileScreen'
@@ -121,6 +122,15 @@ export default function App() {
     content = <ConsentScreen version={checklist.current_consent_version} onDone={finishStep} onBack={() => setStep(null)} />
   } else if (step === 'profile') {
     content = <ProfileScreen profile={profile} onDone={finishStep} onBack={() => setStep(null)} />
+  } else if (step === 'licence') {
+    content = (
+      <LicenceScreen
+        profile={profile}
+        serverOcr={checklist.server_ocr_available}
+        onDone={finishStep}
+        onBack={() => setStep(null)}
+      />
+    )
   } else if (step === 'location') {
     content = <LocationScreen profile={profile} onDone={finishStep} onBack={() => setStep(null)} />
   } else if (step === 'documents') {

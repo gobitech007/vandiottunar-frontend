@@ -25,6 +25,9 @@ export default function Home() {
           <li>{t.trust2}</li>
           <li>{t.trust3}</li>
         </ul>
+        <p className="already">
+          {t.alreadyRegistered} <Link to="/login">{t.login} →</Link>
+        </p>
       </section>
 
       <section className="choices" aria-label={`${t.registerCustomer} / ${t.registerDriver}`}>

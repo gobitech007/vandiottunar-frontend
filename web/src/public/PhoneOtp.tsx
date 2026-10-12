@@ -13,8 +13,19 @@ interface TokenOut {
   is_new_user: boolean
 }
 
-/** Phone + OTP sign-in for drivers and customers. New users get `role`; existing users keep theirs. */
-export default function PhoneOtp({ role, onSignedIn }: { role: UserRole; onSignedIn: (s: UserSession) => void }) {
+/**
+ * Phone + OTP sign-in for drivers and customers. On a register page new users get `role`; existing users keep
+ * theirs. With intent="login" no account is ever created.
+ */
+export default function PhoneOtp({
+  role = 'driver',
+  intent = 'register',
+  onSignedIn,
+}: {
+  role?: UserRole
+  intent?: 'register' | 'login'
+  onSignedIn: (s: UserSession) => void
+}) {
   const { t } = useT()
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -52,9 +63,9 @@ export default function PhoneOtp({ role, onSignedIn }: { role: UserRole; onSigne
     setBusy(true)
     setError(null)
     try {
-      const res = await userApi<TokenOut>('/auth/otp/verify', { body: { phone, code, role } })
+      const res = await userApi<TokenOut>('/auth/otp/verify', { body: { phone, code, role, intent } })
       const session = { token: res.access_token, role: res.role }
-      setUserSession(session)
+      if (res.role !== 'admin') setUserSession(session)
       onSignedIn(session)
     } catch (err) {
       setError((err as Error).message)

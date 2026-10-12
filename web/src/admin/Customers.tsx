@@ -74,6 +74,7 @@ export default function Customers() {
               <th>Email</th>
               <th>Area</th>
               <th>Needs</th>
+              <th>Car number</th>
               <th>Vehicle</th>
               <th>Registered</th>
             </tr>
@@ -95,13 +96,14 @@ export default function Customers() {
                   {c.home_pincode && <span className="muted"> · {c.home_pincode}</span>}
                 </td>
                 <td>{c.needs.map((n) => NEED[n] ?? n).join(', ') || '—'}</td>
+                <td>{c.car_number ?? '—'}</td>
                 <td>{c.vehicle_note ?? '—'}</td>
                 <td>{formatDate(c.created_at)}</td>
               </tr>
             ))}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={8} className="empty">
+                <td colSpan={9} className="empty">
                   No customers yet.
                 </td>
               </tr>

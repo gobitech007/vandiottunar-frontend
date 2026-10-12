@@ -218,3 +218,49 @@ label.btn.disabled { opacity: 0.5; pointer-events: none; }
   .lang-toggle button { padding: 0.35rem 0.6rem; font-size: 0.9rem; }
   .public-bar .btn.link { padding: 0.4rem 0.25rem; font-size: 0.9rem; }
 }
+
+/* ---------- Login, dashboards, bookings ---------- */
+.already { margin-top: 1rem; font-weight: 600; }
+.register-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; align-items: center; margin-top: 1rem; }
+.notice.ok { background: #dcefe3; color: #12502f; }
+.reading { display: flex; align-items: center; gap: 0.6rem; font-weight: 700; color: var(--green); flex-wrap: wrap; }
+.spinner { width: 18px; height: 18px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--green); animation: spin 0.8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+
+.wide-flow { max-width: 760px; }
+.dash-head { margin-bottom: 1rem; }
+.dash-head h1 { margin-bottom: 0.25rem; }
+.dash-head p { margin: 0; }
+
+.booking-fields { border: 1.5px solid var(--line); border-radius: 12px; padding: 0.75rem 1rem 1rem; margin: 1.25rem 0 0.5rem; }
+.booking-fields > legend { font-weight: 800; color: var(--green); padding: 0 0.4rem; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); gap: 0 1rem; }
+.booking-fields .btn.wide { margin-top: 0.6rem; }
+textarea { resize: vertical; }
+
+.booking-list { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: 0.75rem; }
+.booking { display: grid; gap: 0.35rem; margin: 0; }
+.booking p { margin: 0; }
+.booking-top { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.when strong { font-size: 1.1rem; color: var(--green); }
+.person { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.6rem; background: var(--cream); border-radius: 10px; padding: 0.6rem 0.8rem; margin: 0.25rem 0; }
+.person > div { display: flex; flex-direction: column; }
+.person strong { font-size: 1.1rem; }
+.person .btn { margin: 0; }
+.note { font-style: italic; color: var(--muted); }
+.booking .btn { justify-self: start; margin-top: 0.4rem; }
+.muted-card { opacity: 0.75; }
+.past summary { cursor: pointer; font-weight: 700; padding: 0.5rem 0; }
+.pill.status-pending { background: var(--mustard); color: var(--green); }
+.pill.status-assigned { background: #dcefe3; color: var(--ok); }
+.pill.status-cancelled { background: #f6ddd4; color: var(--danger); }
+
+/* Admin */
+.badges { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.pill.off { background: #f1ece0; color: var(--muted); }
+.raw-text summary { cursor: pointer; font-weight: 700; margin-top: 0.75rem; }
+.raw-text pre { white-space: pre-wrap; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 0.75rem; max-height: 220px; overflow: auto; font-size: 0.85rem; }
+.muted-row td { color: var(--muted); }
+.results { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+.page .row-between .tabs { margin-bottom: 0; }

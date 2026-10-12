@@ -1,4 +1,6 @@
 export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
+// Bookings and driver assignment live in the order-service
+export const ORDER_API_URL = (import.meta.env.VITE_ORDER_API_URL as string | undefined) ?? 'http://localhost:8001'
 
 // Admin and public (driver/customer) sign-ins are kept separate, so testing one never logs out the other
 const ADMIN_KEY = 'vo_admin_token'
@@ -65,6 +67,7 @@ interface RequestOptions {
   body?: unknown
   form?: FormData
   scope?: 'admin' | 'user'
+  base?: string
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -76,7 +79,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
 
   let res: Response
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetch(`${options.base ?? API_URL}${path}`, {
       method: options.method ?? (options.body !== undefined || options.form ? 'POST' : 'GET'),
       headers,
       body: options.form ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
@@ -108,11 +111,21 @@ export const api = <T>(path: string, options: Omit<RequestOptions, 'scope'> = {}
 export const userApi = <T>(path: string, options: Omit<RequestOptions, 'scope'> = {}) =>
   request<T>(path, { ...options, scope: 'user' })
 
+/** Order-service calls (bookings, assignments) */
+export const orderApi = <T>(path: string, options: Omit<RequestOptions, 'scope' | 'base'> = {}) =>
+  request<T>(path, { ...options, scope: 'user', base: ORDER_API_URL })
+export const adminOrderApi = <T>(path: string, options: Omit<RequestOptions, 'scope' | 'base'> = {}) =>
+  request<T>(path, { ...options, scope: 'admin', base: ORDER_API_URL })
+
 export type DriverStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'suspended'
 
 export interface DriverSummary {
   id: string
+  user_id: string
   full_name: string | null
+  two_wheeler: boolean
+  four_wheeler: boolean
+  heavy_vehicle: boolean
   phone: string
   status: DriverStatus
   home_pincode: string | null
@@ -136,6 +149,11 @@ export interface DriverDocument {
 export interface DriverDetail extends DriverSummary {
   preferred_language: string
   licence_number: string | null
+  licence_classes: string[]
+  licence_valid_till: string | null
+  licence_source: string | null
+  licence_verified: boolean
+  licence_raw_text: string | null
   vehicle_types: string[]
   availability: string | null
   expected_pay_note: string | null
@@ -196,6 +214,13 @@ export interface DriverProfile {
   full_name: string | null
   preferred_language: 'ta' | 'en'
   licence_number: string | null
+  licence_classes: string[]
+  licence_valid_till: string | null
+  licence_source: string | null
+  licence_verified: boolean
+  two_wheeler: boolean
+  four_wheeler: boolean
+  heavy_vehicle: boolean
   experience_years: number | null
   vehicle_types: string[]
   availability: string | null
@@ -213,6 +238,8 @@ export interface DriverProfile {
 
 export interface Checklist {
   profile_complete: boolean
+  licence_complete: boolean
+  server_ocr_available: boolean
   location_captured: boolean
   consent_accepted: boolean
   missing_documents: DocType[]
@@ -238,6 +265,7 @@ export interface CustomerProfile {
   home_area: string | null
   needs: string[]
   vehicle_note: string | null
+  car_number: string | null
   profile_complete: boolean
   created_at: string
 }
@@ -246,3 +274,109 @@ export interface AdminCustomer extends CustomerProfile {
   phone: string
   role: 'customer' | 'employer'
 }
+
+export interface ParsedLicence {
+  licence_number: string | null
+  classes: string[]
+  valid_till: string | null
+  two_wheeler: boolean
+  four_wheeler: boolean
+  heavy: boolean
+  raw_text: string | null
+}
+
+// ---- Bookings (order-service) ----
+
+export type BookingStatus = 'pending' | 'assigned' | 'completed' | 'cancelled'
+export type BookingType = 'on_demand' | 'job'
+export type VehicleClass = 'two_wheeler' | 'four_wheeler' | 'heavy'
+
+export interface Booking {
+  id: string
+  reference: string
+  booking_type: BookingType
+  vehicle_class: VehicleClass
+  car_number: string | null
+  vehicle_note: string | null
+  start_at: string
+  end_at: string | null
+  pickup_address: string | null
+  pickup_area: string | null
+  pickup_pincode: string
+  pickup_lat: number | null
+  pickup_lng: number | null
+  notes: string | null
+  status: BookingStatus
+  driver_name: string | null
+  driver_phone: string | null
+  assigned_at: string | null
+  cancel_reason: string | null
+  created_at: string
+}
+
+export interface DriverBooking extends Booking {
+  customer_name: string | null
+  customer_phone: string
+  company_name: string | null
+}
+
+export interface AdminBooking extends DriverBooking {
+  customer_user_id: string
+  customer_role: string
+  driver_user_id: string | null
+  assignment_mode: string | null
+  cancelled_by: string | null
+}
+
+export interface Candidate {
+  driver_user_id: string
+  driver_id: string
+  full_name: string | null
+  phone: string
+  home_area: string | null
+  home_pincode: string | null
+  two_wheeler: boolean
+  four_wheeler: boolean
+  heavy_vehicle: boolean
+  licence_classes: string[]
+  experience_years: number | null
+  distance_km: number | null
+  within_service_area: boolean | null
+  pincode_match: number
+  upcoming: number
+  eligible: boolean
+  reasons: string[]
+}
+
+export interface AutoAssignResult {
+  booking_id: string
+  reference: string
+  assigned: boolean
+  driver_name: string | null
+  reason: string | null
+}
+
+/** "Mon, 13 Oct, 9:00 am" in India time */
+export function formatWhen(iso: string | null): string {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('en-IN', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZone: 'Asia/Kolkata',
+  })
+}
+
+export const mapLink = (lat: number, lng: number) => `https://www.google.com/maps?q=${lat},${lng}`
+
+// Class-of-vehicle codes on Indian licences, grouped like the user-service's parser (app/services/licence.py)
+export const LICENCE_GROUPS = {
+  two_wheeler: ['MCWG', 'MCWOG', 'MC50CC', 'MCEX50CC', 'FVG'],
+  four_wheeler: ['LMV', 'LMVNT', 'LMVTR', 'LMVCAB', 'LMVTAXI', 'LMVINVCRG', '3WNT', '3WT', 'LMVAR'],
+  heavy: ['HMV', 'HGMV', 'HPMV', 'HTV', 'HTRAILER', 'HGV', 'HPV', 'MGV', 'MPMV', 'MMV', 'TRAILR'],
+} as const
+export type LicenceGroup = keyof typeof LICENCE_GROUPS
+/** The code added when someone ticks a group by hand */
+export const DEFAULT_CODE: Record<LicenceGroup, string> = { two_wheeler: 'MCWG', four_wheeler: 'LMV', heavy: 'HGMV' }

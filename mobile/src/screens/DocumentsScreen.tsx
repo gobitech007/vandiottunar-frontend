@@ -6,16 +6,15 @@ import { api, type DocType, type DocumentInfo } from '../api'
 import { errorText, useT } from '../i18n'
 import { Button, Card, colors, ErrorText, Screen, styles } from '../ui'
 
+// Licence photos are taken on the licence screen
 const DOCS: { type: DocType; required: boolean; front?: boolean }[] = [
-  { type: 'licence_front', required: true },
-  { type: 'licence_back', required: true },
   { type: 'id_proof', required: true },
   { type: 'selfie', required: true, front: true },
   { type: 'address_proof', required: false },
 ]
 
 // Shrink photos before upload: faster on mobile data and well under the 5 MB limit
-async function compress(uri: string): Promise<string> {
+export async function compress(uri: string): Promise<string> {
   const image = await ImageManipulator.manipulate(uri).resize({ width: 1600 }).renderAsync()
   const saved = await image.saveAsync({ compress: 0.7, format: SaveFormat.JPEG })
   return saved.uri
