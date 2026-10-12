@@ -20,7 +20,6 @@ export default function ProfileScreen({
 }) {
   const { t, lang } = useT()
   const [fullName, setFullName] = useState(profile.full_name ?? '')
-  const [licence, setLicence] = useState(profile.licence_number ?? '')
   const [experience, setExperience] = useState(profile.experience_years?.toString() ?? '')
   const [vehicles, setVehicles] = useState<string[]>(profile.vehicle_types)
   const [availability, setAvailability] = useState<string[]>(profile.availability ? [profile.availability] : [])
@@ -31,7 +30,6 @@ export default function ProfileScreen({
 
   const complete =
     fullName.trim().length >= 2 &&
-    licence.trim().length >= 8 &&
     experience !== '' &&
     vehicles.length > 0 &&
     availability.length > 0 &&
@@ -44,7 +42,6 @@ export default function ProfileScreen({
       await api.put('/drivers/me/profile', {
         full_name: fullName.trim(),
         preferred_language: lang,
-        licence_number: licence.trim(),
         experience_years: Number(experience),
         vehicle_types: vehicles,
         availability: availability[0],
@@ -62,14 +59,6 @@ export default function ProfileScreen({
   return (
     <Screen title={t.stepProfile} onBack={onBack}>
       <Field label={t.fullName} value={fullName} onChangeText={setFullName} autoComplete="name" maxLength={120} />
-      <Field
-        label={t.licenceNumber}
-        value={licence}
-        onChangeText={(v) => setLicence(v.toUpperCase())}
-        autoCapitalize="characters"
-        placeholder="TN38 20200001234"
-        maxLength={20}
-      />
       <Field
         label={t.experience}
         value={experience}

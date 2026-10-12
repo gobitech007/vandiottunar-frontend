@@ -1,8 +1,29 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { api, formatDate, label, type DriverDetail as Detail } from '../api'
+import {
+  api,
+  DEFAULT_CODE,
+  formatDate,
+  label,
+  LICENCE_GROUPS,
+  type DriverDetail as Detail,
+  type LicenceGroup,
+} from '../api'
 
 const mapLink = (lat: number, lng: number) => `https://www.google.com/maps?q=${lat},${lng}`
+
+const GROUPS: { key: LicenceGroup; title: string }[] = [
+  { key: 'two_wheeler', title: 'Two-wheeler' },
+  { key: 'four_wheeler', title: 'Four-wheeler (car)' },
+  { key: 'heavy', title: 'Heavy vehicle' },
+]
+const inGroup = (codes: string[], g: LicenceGroup) => codes.some((c) => (LICENCE_GROUPS[g] as readonly string[]).includes(c))
+const SOURCE: Record<string, string> = {
+  ocr_server: 'read from the photo on the server (AWS Textract)',
+  ocr_browser: "read from the photo in the driver's browser",
+  ocr_device: "read from the photo on the driver's phone",
+  manual: 'typed by the driver',
+}
 
 export default function DriverDetail() {
   const { id } = useParams<{ id: string }>()
@@ -10,6 +31,8 @@ export default function DriverDetail() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [policeChecked, setPoliceChecked] = useState(false)
+  const [licenceChecked, setLicenceChecked] = useState(false)
+  const [codes, setCodes] = useState<string[]>([])
   const [policeRef, setPoliceRef] = useState('')
   const [note, setNote] = useState('')
   const [reason, setReason] = useState('')
@@ -19,6 +42,8 @@ export default function DriverDetail() {
       .then((d) => {
         setDriver(d)
         setPoliceChecked(d.police_verified)
+        setLicenceChecked(d.licence_verified)
+        setCodes(d.licence_classes)
         setPoliceRef(d.police_reference ?? '')
       })
       .catch((err: Error) => setError(err.message))
@@ -43,7 +68,14 @@ export default function DriverDetail() {
 
   function approve(e: FormEvent) {
     e.preventDefault()
-    void act('approve', { police_verified: policeChecked, police_reference: policeRef || null, note: note || null })
+    const changed = driver && [...codes].sort().join() !== [...driver.licence_classes].sort().join()
+    void act('approve', {
+      police_verified: policeChecked,
+      licence_verified: licenceChecked,
+      licence_classes: changed ? codes : null,
+      police_reference: policeRef || null,
+      note: note || null,
+    })
   }
 
   function reject(e: FormEvent) {
@@ -91,8 +123,6 @@ export default function DriverDetail() {
         <section className="card">
           <h2>Profile</h2>
           <dl>
-            <dt>Licence number</dt>
-            <dd>{driver.licence_number ?? '—'}</dd>
             <dt>Experience</dt>
             <dd>{driver.experience_years != null ? `${driver.experience_years} years` : '—'}</dd>
             <dt>Can drive</dt>
@@ -151,6 +181,44 @@ export default function DriverDetail() {
       </div>
 
       <section className="card">
+        <h2>Driving licence</h2>
+        <dl>
+          <dt>Number</dt>
+          <dd>
+            <strong>{driver.licence_number ?? '—'}</strong>
+          </dd>
+          <dt>Allows</dt>
+          <dd className="badges">
+            {GROUPS.map((g) => (
+              <span key={g.key} className={`pill ${inGroup(driver.licence_classes, g.key) ? 'ok' : 'off'}`}>
+                {inGroup(driver.licence_classes, g.key) ? '✓' : '✗'} {g.title}
+              </span>
+            ))}
+          </dd>
+          <dt>Class codes</dt>
+          <dd>{driver.licence_classes.join(', ') || '—'}</dd>
+          <dt>Valid till</dt>
+          <dd>
+            {driver.licence_valid_till ?? '—'}
+            {driver.licence_valid_till && new Date(driver.licence_valid_till) < new Date() && (
+              <strong className="error"> · expired</strong>
+            )}
+          </dd>
+          <dt>Details were</dt>
+          <dd>{SOURCE[driver.licence_source ?? 'manual'] ?? driver.licence_source}</dd>
+          <dt>Checked by admin</dt>
+          <dd>{driver.licence_verified ? <span className="pill ok">Yes</span> : <span className="pill">Not yet</span>}</dd>
+        </dl>
+        {driver.licence_raw_text && (
+          <details className="raw-text">
+            <summary>Text read from the licence photo</summary>
+            <pre>{driver.licence_raw_text}</pre>
+          </details>
+        )}
+        <p className="hint">Compare the number and class codes with the licence photos below before approving.</p>
+      </section>
+
+      <section className="card">
         <h2>Documents</h2>
         {driver.documents.length === 0 && <p className="muted">No documents uploaded yet.</p>}
         <div className="docs">
@@ -180,6 +248,34 @@ export default function DriverDetail() {
           {canApprove && (
             <form className="card" onSubmit={approve}>
               <h2>Approve</h2>
+              <fieldset className="chips">
+                <legend>Licence allows (correct it if the photo shows otherwise)</legend>
+                {GROUPS.map((g) => {
+                  const on = inGroup(codes, g.key)
+                  return (
+                    <button
+                      type="button"
+                      key={g.key}
+                      role="checkbox"
+                      aria-checked={on}
+                      className={`chip ${on ? 'on' : ''}`}
+                      onClick={() =>
+                        setCodes((prev) =>
+                          on
+                            ? prev.filter((c) => !(LICENCE_GROUPS[g.key] as readonly string[]).includes(c))
+                            : [...prev, DEFAULT_CODE[g.key]],
+                        )
+                      }
+                    >
+                      {g.title}
+                    </button>
+                  )
+                })}
+              </fieldset>
+              <label className="check">
+                <input type="checkbox" checked={licenceChecked} onChange={(e) => setLicenceChecked(e.target.checked)} />
+                Licence number and vehicle classes match the photo
+              </label>
               <label className="check">
                 <input type="checkbox" checked={policeChecked} onChange={(e) => setPoliceChecked(e.target.checked)} />
                 Police verification is complete
@@ -188,7 +284,7 @@ export default function DriverDetail() {
               <input id="police-ref" value={policeRef} onChange={(e) => setPoliceRef(e.target.value)} maxLength={64} />
               <label htmlFor="note">Internal note (optional)</label>
               <input id="note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
-              <button className="btn primary" disabled={busy || !policeChecked}>
+              <button className="btn primary" disabled={busy || !policeChecked || !licenceChecked || codes.length === 0}>
                 Approve driver
               </button>
             </form>

@@ -1,20 +1,27 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError, getUserSession, setUserSession, userApi, type CustomerProfile, type UserSession } from '../api'
 import { useT } from '../i18n'
+import BookingFields, { createBooking, draftReady, emptyDraft, type BookingDraft } from './BookingFields'
 import PhoneOtp from './PhoneOtp'
 import PublicShell from './PublicShell'
 import WrongRole from './WrongRole'
 
 type Kind = 'customer' | 'employer'
 const NEEDS = ['on_demand', 'job']
+const CAR_RE = /^([A-Z]{2}\d{1,2}[A-Z]{0,3}\d{1,4}|\d{2}BH\d{4}[A-Z]{1,2})$/
+
+export const cleanCarNumber = (v: string) => v.toUpperCase().replace(/[\s.-]/g, '')
+export const validCarNumber = (v: string) => CAR_RE.test(cleanCarNumber(v))
 
 export default function CustomerRegister() {
   const { t } = useT()
+  const navigate = useNavigate()
+  const [params] = useSearchParams()
+  const editing = params.get('edit') === '1'
   const [session, setSession] = useState<UserSession | null>(getUserSession)
   const [kind, setKind] = useState<Kind | null>(null)
   const [profile, setProfile] = useState<CustomerProfile | null>(null)
-  const [editing, setEditing] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const isCustomer = session?.role === 'customer' || session?.role === 'employer'
@@ -52,34 +59,17 @@ export default function CustomerRegister() {
     body = <WrongRole role={session.role} />
   } else if (!profile) {
     body = error ? <p className="error">{error}</p> : <p className="muted">…</p>
-  } else if (!profile.profile_complete || editing) {
+  } else if (profile.profile_complete && !editing) {
+    // Already registered: straight to their dashboard
+    return <Navigate to="/dashboard" replace />
+  } else {
     body = (
       <CustomerForm
         profile={profile}
         isEmployer={session?.role === 'employer'}
-        onSaved={(p) => {
-          setProfile(p)
-          setEditing(false)
-          window.scrollTo(0, 0)
-        }}
+        withBooking={!profile.profile_complete}
+        onDone={(booked) => navigate('/dashboard', { replace: true, state: { booked } })}
       />
-    )
-  } else {
-    body = (
-      <section className="card status-card is-ok">
-        <div className="status-icon" aria-hidden="true">
-          ✓
-        </div>
-        <h2>{t.customerDoneTitle}</h2>
-        {profile.full_name && <p className="strong">{profile.full_name}</p>}
-        <p>{t.customerDoneBody}</p>
-        <div className="row-between">
-          <button className="btn" onClick={() => setEditing(true)}>
-            {t.editDetails}
-          </button>
-          <Link to="/">{t.home}</Link>
-        </div>
-      </section>
     )
   }
 
@@ -115,42 +105,57 @@ function KindPicker({ onPick }: { onPick: (k: Kind) => void }) {
 function CustomerForm({
   profile,
   isEmployer,
-  onSaved,
+  withBooking,
+  onDone,
 }: {
   profile: CustomerProfile
   isEmployer: boolean
-  onSaved: (p: CustomerProfile) => void
+  withBooking: boolean // first registration also books the first driver
+  onDone: (booked: boolean) => void
 }) {
   const { t, lang } = useT()
   const [name, setName] = useState(profile.full_name ?? '')
   const [email, setEmail] = useState(profile.email ?? '')
   const [company, setCompany] = useState(profile.company_name ?? '')
+  const [carNumber, setCarNumber] = useState(profile.car_number ?? '')
   const [pincode, setPincode] = useState(profile.home_pincode ?? '')
   const [area, setArea] = useState(profile.home_area ?? '')
   const [needs, setNeeds] = useState<string[]>(profile.needs)
   const [vehicle, setVehicle] = useState(profile.vehicle_note ?? '')
+  const [draft, setDraft] = useState<BookingDraft>(() => emptyDraft(isEmployer ? 'job' : 'on_demand'))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const carOk = carNumber.trim() ? validCarNumber(carNumber) : isEmployer
   const complete =
-    name.trim().length >= 2 && /^[1-9]\d{5}$/.test(pincode) && needs.length > 0 && (!isEmployer || company.trim())
+    name.trim().length >= 2 &&
+    /^[1-9]\d{5}$/.test(pincode) &&
+    carOk &&
+    (!isEmployer || company.trim()) &&
+    (withBooking ? draftReady(draft) : needs.length > 0)
 
   async function save(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setError(null)
     try {
+      const car = carNumber.trim() ? cleanCarNumber(carNumber) : null
       const body: Record<string, unknown> = {
         full_name: name.trim(),
         preferred_language: lang,
         home_pincode: pincode,
         home_area: area.trim() || null,
-        needs,
+        needs: withBooking ? [...new Set([...needs, draft.bookingType])] : needs,
         vehicle_note: vehicle.trim() || null,
       }
+      if (car) body.car_number = car
       if (email.trim()) body.email = email.trim()
       if (isEmployer) body.company_name = company.trim()
-      onSaved(await userApi<CustomerProfile>('/customers/me', { method: 'PUT', body }))
+      await userApi<CustomerProfile>('/customers/me', { method: 'PUT', body })
+      if (withBooking) {
+        await createBooking(draft, { car_number: car, pickup_pincode: pincode, pickup_area: area.trim() || null })
+      }
+      onDone(withBooking)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -174,6 +179,16 @@ function CustomerForm({
           />
         </>
       )}
+      <label htmlFor="c-car">{isEmployer ? t.carNumberOptional : t.carNumber}</label>
+      <input
+        id="c-car"
+        value={carNumber}
+        onChange={(e) => setCarNumber(e.target.value.toUpperCase())}
+        placeholder={t.carNumberPh}
+        maxLength={16}
+        autoComplete="off"
+        aria-invalid={Boolean(carNumber.trim()) && !validCarNumber(carNumber)}
+      />
       <label htmlFor="c-email">{t.email}</label>
       <input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
       <label htmlFor="c-pin">{t.yourPincode}</label>
@@ -187,24 +202,30 @@ function CustomerForm({
       />
       <label htmlFor="c-area">{t.yourArea}</label>
       <input id="c-area" value={area} onChange={(e) => setArea(e.target.value)} maxLength={120} />
-      <fieldset className="chips">
-        <legend>{t.needs}</legend>
-        {NEEDS.map((n) => {
-          const on = needs.includes(n)
-          return (
-            <button
-              type="button"
-              key={n}
-              role="checkbox"
-              aria-checked={on}
-              className={`chip ${on ? 'on' : ''}`}
-              onClick={() => setNeeds((l) => (on ? l.filter((x) => x !== n) : [...l, n]))}
-            >
-              {t.needLabels[n]}
-            </button>
-          )
-        })}
-      </fieldset>
+
+      {withBooking ? (
+        <BookingFields value={draft} onChange={setDraft} />
+      ) : (
+        <fieldset className="chips">
+          <legend>{t.needs}</legend>
+          {NEEDS.map((n) => {
+            const on = needs.includes(n)
+            return (
+              <button
+                type="button"
+                key={n}
+                role="checkbox"
+                aria-checked={on}
+                className={`chip ${on ? 'on' : ''}`}
+                onClick={() => setNeeds((l) => (on ? l.filter((x) => x !== n) : [...l, n]))}
+              >
+                {t.needLabels[n]}
+              </button>
+            )
+          })}
+        </fieldset>
+      )}
+
       <label htmlFor="c-vehicle">{t.vehicleNote}</label>
       <input
         id="c-vehicle"
@@ -219,7 +240,7 @@ function CustomerForm({
         </p>
       )}
       <button className="btn primary wide" disabled={!complete || busy}>
-        {t.register}
+        {withBooking ? t.register : t.save}
       </button>
     </form>
   )

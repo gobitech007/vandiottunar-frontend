@@ -1,6 +1,6 @@
 # Vandi Ottunar — Frontend
 
-Two apps that talk to [`vandiottunar-user-service`](https://github.com/gobitech007/vandiottunar-user-service):
+Two apps that talk to [`vandiottunar-user-service`](https://github.com/gobitech007/vandiottunar-user-service) (accounts, drivers) and [`vandiottunar-order-service`](https://github.com/gobitech007/vandiottunar-order-service) (bookings, driver assignment):
 
 | Folder | App | Stack |
 |---|---|---|
@@ -23,7 +23,7 @@ In development the OTP appears on screen ("Development code"), so no SMS account
 
 ```bash
 cd web
-cp .env.example .env     # VITE_API_URL=http://localhost:8000
+cp .env.example .env     # VITE_API_URL=http://localhost:8000, VITE_ORDER_API_URL=http://localhost:8001
 npm install
 npm run dev              # http://localhost:5173
 ```
@@ -33,7 +33,13 @@ npm run dev              # http://localhost:5173
 | `/` | Home page (Tamil / English) with **Register as customer** and **Register as driver** |
 | `/register/driver` | OTP → privacy notice → details → browser location → licence/ID/selfie upload (photos shrunk in the browser) → submit → status |
 | `/register/customer` | Choose *Car owner* or *Business* → OTP → name, pincode, needs (company for businesses) → done |
-| `/admin` | Admin panel: **Drivers** and **Customers** tabs |
+| `/login` | One sign-in for everyone: drivers and customers go to their dashboard, admins to the admin panel |
+| `/dashboard` | **Driver:** status, then assigned customers (name, phone, car number, pickup, dates). **Customer:** bookings with the assigned driver's name and phone, and *Book a driver* |
+| `/admin` | Admin panel: **Drivers**, **Bookings** (auto-assign all waiting, or open a booking to assign manually from ranked drivers) and **Customers** |
+
+After registering (same OTP), people go straight to their dashboard.
+
+**Licence reading:** in the driver's *Driving licence* step, the photos are read automatically. If the user-service has `OCR_PROVIDER=textract`, AWS Textract reads them on the server; otherwise the browser reads them with Tesseract.js (downloads about 10 MB from cdn.jsdelivr.net the first time). Either way the text goes to the user-service's parser, which finds the licence number, validity and vehicle classes (MCWG → two-wheeler, LMV → car, HMV/HGMV/HPMV → heavy). The driver confirms and an admin checks against the photo before approving.
 
 A phone number belongs to one role: if a driver's number is used on the customer page (or the other way round), the page says so and links to the right one.
 

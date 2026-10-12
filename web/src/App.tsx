@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter, Link, Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom'
+import BookingDetail from './admin/BookingDetail'
+import Bookings from './admin/Bookings'
 import Customers from './admin/Customers'
 import DriverDetail from './admin/DriverDetail'
 import Drivers from './admin/Drivers'
@@ -7,8 +9,10 @@ import Login from './admin/Login'
 import { getToken, setToken } from './api'
 import { LangProvider } from './i18n'
 import CustomerRegister from './public/CustomerRegister'
+import Dashboard from './public/Dashboard'
 import DriverRegister from './public/DriverRegister'
 import Home from './public/Home'
+import LoginPage from './public/LoginPage'
 
 function AdminShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
@@ -22,6 +26,7 @@ function AdminShell({ children }: { children: ReactNode }) {
         </Link>
         <nav className="admin-nav" aria-label="Admin">
           <NavLink to="/admin/drivers">Drivers</NavLink>
+          <NavLink to="/admin/bookings">Bookings</NavLink>
           <NavLink to="/admin/customers">Customers</NavLink>
         </nav>
         <button
@@ -48,6 +53,8 @@ export default function App() {
           <Route path="/" element={<Home />} />
           <Route path="/register/driver" element={<DriverRegister />} />
           <Route path="/register/customer" element={<CustomerRegister />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
 
           {/* Admin panel */}
           <Route path="/admin" element={<Navigate to="/admin/drivers" replace />} />
@@ -69,6 +76,22 @@ export default function App() {
             }
           />
           <Route
+            path="/admin/bookings"
+            element={
+              <AdminShell>
+                <Bookings />
+              </AdminShell>
+            }
+          />
+          <Route
+            path="/admin/bookings/:id"
+            element={
+              <AdminShell>
+                <BookingDetail />
+              </AdminShell>
+            }
+          />
+          <Route
             path="/admin/customers"
             element={
               <AdminShell>
@@ -78,7 +101,6 @@ export default function App() {
           />
 
           {/* Old admin links */}
-          <Route path="/login" element={<Navigate to="/admin/login" replace />} />
           <Route path="/drivers/*" element={<Navigate to="/admin/drivers" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

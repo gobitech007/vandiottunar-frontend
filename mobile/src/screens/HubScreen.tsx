@@ -4,7 +4,9 @@ import { api, type Checklist, type Profile } from '../api'
 import { errorText, useT } from '../i18n'
 import { Button, Card, colors, ErrorText, Screen, styles } from '../ui'
 
-export type Step = 'consent' | 'profile' | 'location' | 'documents'
+export type Step = 'consent' | 'profile' | 'licence' | 'location' | 'documents'
+
+const LICENCE_SIDES = ['licence_front', 'licence_back']
 
 export default function HubScreen({
   profile,
@@ -26,8 +28,17 @@ export default function HubScreen({
   const steps: { key: Step; title: string; done: boolean }[] = [
     { key: 'consent', title: t.stepConsent, done: checklist.consent_accepted },
     { key: 'profile', title: t.stepProfile, done: checklist.profile_complete },
+    {
+      key: 'licence',
+      title: t.stepLicence,
+      done: checklist.licence_complete && !checklist.missing_documents.some((d) => LICENCE_SIDES.includes(d)),
+    },
     { key: 'location', title: t.stepLocation, done: checklist.location_captured },
-    { key: 'documents', title: t.stepDocuments, done: checklist.missing_documents.length === 0 },
+    {
+      key: 'documents',
+      title: t.stepDocuments,
+      done: !checklist.missing_documents.some((d) => !LICENCE_SIDES.includes(d)),
+    },
   ]
   const next = steps.find((s) => !s.done)
 

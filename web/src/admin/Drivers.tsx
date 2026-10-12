@@ -104,6 +104,7 @@ export default function Drivers() {
               <th>Phone</th>
               <th>Area</th>
               <th>Experience</th>
+              <th>Licence</th>
               <th>Wants</th>
               <th>Police</th>
               <th>{status === 'submitted' ? 'Submitted' : 'Registered'}</th>
@@ -121,6 +122,9 @@ export default function Drivers() {
                   {d.home_pincode && <span className="muted"> · {d.home_pincode}</span>}
                 </td>
                 <td>{d.experience_years != null ? `${d.experience_years} yrs` : '—'}</td>
+                <td>
+                  {[d.two_wheeler && '2W', d.four_wheeler && '4W', d.heavy_vehicle && 'Heavy'].filter(Boolean).join(' · ') || '—'}
+                </td>
                 <td>{d.work_preferences.map(label).join(', ') || '—'}</td>
                 <td>{d.police_verified ? <span className="pill ok">Verified</span> : <span className="pill">Pending</span>}</td>
                 <td>{formatDate(status === 'submitted' ? d.submitted_at : d.created_at)}</td>
@@ -128,7 +132,7 @@ export default function Drivers() {
             ))}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={7} className="empty">
+                <td colSpan={8} className="empty">
                   No drivers here yet.
                 </td>
               </tr>
