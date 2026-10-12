@@ -1,23 +1,14 @@
 import { Link } from 'react-router-dom'
 import { useT } from '../i18n'
+import DriverIllustration from './DriverIllustration'
 import PublicShell from './PublicShell'
-
-function Wheel() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 100 100" className="hero-wheel" fill="none" stroke="currentColor" strokeWidth="6">
-      <circle cx="50" cy="50" r="44" />
-      <circle cx="50" cy="50" r="10" />
-      <path d="M40 50H6M60 50h34M50 60v34" />
-    </svg>
-  )
-}
 
 export default function Home() {
   const { t } = useT()
   return (
     <PublicShell>
       <section className="hero">
-        <Wheel />
+        <div className="hero-text">
         <h1>{t.heroTitle}</h1>
         <p>{t.heroBody}</p>
         <ul className="trust">
@@ -28,6 +19,8 @@ export default function Home() {
         <p className="already">
           {t.alreadyRegistered} <Link to="/login">{t.login} →</Link>
         </p>
+        </div>
+        <DriverIllustration label={t.heroArt} />
       </section>
 
       <section className="choices" aria-label={`${t.registerCustomer} / ${t.registerDriver}`}>

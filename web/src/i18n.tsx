@@ -4,6 +4,7 @@ const en = {
   brand: 'Vandi Ottunar',
   brandAlt: 'வண்டி ஓட்டுநர்',
   heroTitle: 'Trusted drivers, one call away',
+  heroArt: 'A professional driver in uniform at the steering wheel',
   heroBody:
     'Hire a verified driver for your own car — by the hour, by the day, or for outstation trips. Businesses can hire permanent drivers too.',
   needDriver: 'I need a driver',
@@ -224,6 +225,7 @@ const ta: Strings = {
   brand: 'வண்டி ஓட்டுநர்',
   brandAlt: 'Vandi Ottunar',
   heroTitle: 'நம்பகமான டிரைவர், ஒரே அழைப்பில்',
+  heroArt: 'சீருடை அணிந்த தொழில்முறை டிரைவர் ஸ்டீயரிங் பிடித்தபடி',
   heroBody:
     'உங்கள் காருக்கு சரிபார்க்கப்பட்ட டிரைவர் — மணி நேரம், நாள் முழுவதும் அல்லது வெளியூர் பயணத்துக்கு. நிறுவனங்கள் நிரந்தர டிரைவர்களையும் நியமிக்கலாம்.',
   needDriver: 'எனக்கு டிரைவர் வேண்டும்',
