@@ -1,0 +1,50 @@
+{
+  "folders": [
+    {
+      "name": "vandiottunar-frontend",
+      "path": "."
+    },
+    {
+      "name": "vandiottunar-user-service",
+      "path": "../vandiottunar-user-service"
+    },
+    {
+      "name": "vandiottunar-order-service",
+      "path": "../vandiottunar-order-service"
+    }
+  ],
+  "settings": {
+    "python.terminal.activateEnvironment": true
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [],
+    "compounds": [
+      {
+        "name": "Debug all: user + order service + website",
+        "configurations": [
+          {
+            "name": "User service: debug (port 8000)",
+            "folder": "vandiottunar-user-service"
+          },
+          {
+            "name": "Order service: debug (port 8001)",
+            "folder": "vandiottunar-order-service"
+          },
+          {
+            "name": "Website: open in Chrome (debug)",
+            "folder": "vandiottunar-frontend"
+          }
+        ],
+        "stopAll": true
+      }
+    ]
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.debugpy",
+      "dbaeumer.vscode-eslint"
+    ]
+  }
+}

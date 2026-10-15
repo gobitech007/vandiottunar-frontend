@@ -91,3 +91,21 @@ Android package: `in.vandiottunar.driver`. Location is requested only while the 
 cd web && npm run build && npm run lint
 cd mobile && npx tsc --noEmit && npx expo export --platform android
 ```
+
+## VS Code: start everything automatically
+
+Keep the three repos side by side in one folder (`vandiottunar-frontend`, `vandiottunar-user-service`, `vandiottunar-order-service`), then open **`vandiottunar-frontend/vandiottunar.code-workspace`** (File → Open Workspace from File).
+
+When the workspace opens, VS Code runs:
+
+| Terminal | What it does |
+|---|---|
+| User service | `alembic upgrade head`, then uvicorn on **8000** (auto-reload) |
+| Order service | `alembic upgrade head`, then uvicorn on **8001** (auto-reload) |
+| Website | `npm run dev` in `web/` on **5173** |
+
+The first time, VS Code asks whether to allow automatic tasks: choose **Allow** (or Command Palette → *Tasks: Manage Automatic Tasks* → *Allow*). Each service needs its own `.venv` and `.env`, and `web/` needs `npm install`, done once.
+
+**Debugging (F5):** stop the auto-started server first (Command Palette → *Tasks: Terminate Task*), then pick *User service: debug*, *Order service: debug*, or *Debug all* in the Run and Debug panel. *Website: open in Chrome (debug)* attaches to the running site, so it doesn't need stopping.
+
+Opening one repo on its own starts just that app.

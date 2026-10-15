@@ -1,0 +1,19 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Website: open in Chrome (debug)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/web/src"
+    },
+    {
+      "name": "Admin panel: open in Chrome (debug)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173/admin",
+      "webRoot": "${workspaceFolder}/web/src"
+    }
+  ]
+}
