@@ -134,7 +134,14 @@ export default function App() {
   } else if (step === 'location') {
     content = <LocationScreen profile={profile} onDone={finishStep} onBack={() => setStep(null)} />
   } else if (step === 'documents') {
-    content = <DocumentsScreen onDone={finishStep} onBack={() => setStep(null)} />
+    content = (
+      <DocumentsScreen
+        profile={profile}
+        serverOcr={checklist.server_ocr_available}
+        onDone={finishStep}
+        onBack={() => setStep(null)}
+      />
+    )
   } else {
     content = (
       <HubScreen profile={profile} checklist={checklist} onOpen={setStep} onSubmitted={refresh} onLogout={logout} />

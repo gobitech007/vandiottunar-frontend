@@ -76,6 +76,7 @@ export interface Profile {
   licence_classes: string[]
   licence_valid_till: string | null
   licence_source: string | null
+  aadhaar_last4: string | null
   experience_years: number | null
   vehicle_types: string[]
   availability: string | null
@@ -94,6 +95,7 @@ export interface Profile {
 export interface Checklist {
   profile_complete: boolean
   licence_complete: boolean
+  aadhaar_captured: boolean
   server_ocr_available: boolean
   location_captured: boolean
   consent_accepted: boolean

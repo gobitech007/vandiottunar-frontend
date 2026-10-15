@@ -5,6 +5,7 @@ import {
   DEFAULT_CODE,
   LICENCE_GROUPS,
   type LicenceGroup,
+  type ParsedAadhaar,
   type ParsedLicence,
   getUserSession,
   setUserSession,
@@ -16,6 +17,7 @@ import {
   type UserSession,
 } from '../api'
 import { useT } from '../i18n'
+import { aadhaarDigits, displayClass, formatAadhaar, maskAadhaar, validAadhaar } from './idNumbers'
 import { needsFirstDownload, readImageText } from './licenceOcr'
 import PhoneOtp from './PhoneOtp'
 import PublicShell from './PublicShell'
@@ -100,7 +102,14 @@ export default function DriverRegister() {
   } else if (step === 'location') {
     body = <LocationStep profile={profile} onDone={finish} onBack={() => setStep(null)} />
   } else if (step === 'documents') {
-    body = <DocumentsStep onDone={finish} onBack={() => setStep(null)} />
+    body = (
+      <DocumentsStep
+        profile={profile}
+        serverOcr={checklist.server_ocr_available}
+        onDone={finish}
+        onBack={() => setStep(null)}
+      />
+    )
   } else {
     body = <Hub profile={profile} checklist={checklist} onOpen={setStep} />
   }
@@ -130,7 +139,11 @@ function Hub({ profile, checklist, onOpen }: { profile: DriverProfile; checklist
       done: checklist.licence_complete && !LICENCE_SIDES.some((d) => missing.includes(d)),
     },
     { key: 'location', title: t.stepLocation, done: checklist.location_captured },
-    { key: 'documents', title: t.stepDocuments, done: !missing.some((d) => !LICENCE_SIDES.includes(d)) },
+    {
+      key: 'documents',
+      title: t.stepDocuments,
+      done: checklist.aadhaar_captured && !missing.some((d) => !LICENCE_SIDES.includes(d)),
+    },
   ]
   const next = steps.find((s) => !s.done)
 
@@ -500,12 +513,60 @@ async function uploadDocument(type: DocType, file: File, tooBig: string): Promis
   return ready
 }
 
-function DocumentsStep({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+function DocumentsStep({
+  profile,
+  serverOcr,
+  onDone,
+  onBack,
+}: {
+  profile: DriverProfile
+  serverOcr: boolean
+  onDone: () => void
+  onBack: () => void
+}) {
   const { t } = useT()
   const [uploaded, setUploaded] = useState<Set<DocType>>(new Set())
   const [working, setWorking] = useState<DocType | null>(null)
   const [error, setError] = useState<string | null>(null)
   const inputs = useRef<Partial<Record<DocType, HTMLInputElement | null>>>({})
+  // Aadhaar number: read from the ID photo, checked here, and only its last 4 digits saved
+  const [aadhaar, setAadhaar] = useState('')
+  const [aadhaarRead, setAadhaarRead] = useState<'reading' | 'found' | 'missing' | null>(null)
+  const [aadhaarSource, setAadhaarSource] = useState('manual')
+  const [aadhaarNote, setAadhaarNote] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+
+  async function readAadhaar(file: File) {
+    setAadhaarRead('reading')
+    setAadhaarNote(null)
+    try {
+      let result: ParsedAadhaar | null = null
+      let how = 'ocr_browser'
+      if (serverOcr) {
+        try {
+          result = await userApi<ParsedAadhaar>('/drivers/me/aadhaar/scan', { method: 'POST' })
+          how = 'ocr_server'
+        } catch {
+          result = null // fall back to reading in this browser
+        }
+      }
+      if (!result?.aadhaar_number) {
+        if (needsFirstDownload()) setAadhaarNote(t.firstLoad)
+        const text = await readImageText(file)
+        if (text.trim()) result = await userApi<ParsedAadhaar>('/drivers/me/aadhaar/parse', { body: { text: text.slice(0, 8000) } })
+        how = 'ocr_browser'
+      }
+      if (result?.aadhaar_number) {
+        setAadhaar(formatAadhaar(result.aadhaar_number))
+        setAadhaarSource(how)
+        setAadhaarRead('found')
+      } else setAadhaarRead('missing')
+    } catch {
+      setAadhaarRead('missing')
+    } finally {
+      setAadhaarNote(null)
+    }
+  }
 
   useEffect(() => {
     userApi<DocumentInfo[]>('/drivers/me/documents')
@@ -518,8 +579,9 @@ function DocumentsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
     setError(null)
     setWorking(type)
     try {
-      await uploadDocument(type, file, t.tooBig)
+      const ready = await uploadDocument(type, file, t.tooBig)
       setUploaded((prev) => new Set(prev).add(type))
+      if (type === 'id_proof') void readAadhaar(ready)
     } catch (err) {
       setError((err as Error).message)
     } finally {
@@ -530,6 +592,24 @@ function DocumentsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
   }
 
   const allRequired = DOCS.filter((d) => d.required).every((d) => uploaded.has(d.type))
+  const typed = aadhaarDigits(aadhaar)
+  const aadhaarOk = typed ? validAadhaar(typed) : Boolean(profile.aadhaar_last4)
+
+  async function next() {
+    setError(null)
+    if (typed) {
+      setSaving(true)
+      try {
+        await userApi('/drivers/me/aadhaar', { method: 'PUT', body: { aadhaar_number: typed, source: aadhaarSource } })
+      } catch (err) {
+        setError((err as Error).message)
+        return
+      } finally {
+        setSaving(false)
+      }
+    }
+    onDone()
+  }
 
   return (
     <StepFrame title={t.stepDocuments} onBack={onBack}>
@@ -566,18 +646,64 @@ function DocumentsStep({ onDone, onBack }: { onDone: () => void; onBack: () => v
           )
         })}
       </ul>
+
+      <div className="doc-extra">
+        <label htmlFor="aadhaar">{t.aadhaarNumber}</label>
+        <input
+          id="aadhaar"
+          inputMode="numeric"
+          autoComplete="off"
+          value={aadhaar}
+          placeholder="XXXX XXXX XXXX"
+          maxLength={14}
+          onChange={(e) => {
+            setAadhaar(formatAadhaar(e.target.value))
+            setAadhaarSource('manual')
+            if (aadhaarRead !== 'reading') setAadhaarRead(null)
+          }}
+          aria-invalid={typed.length === 12 && !validAadhaar(typed)}
+          aria-describedby="aadhaar-note"
+        />
+        <p id="aadhaar-note" className="field-note" role="status">
+          {aadhaarRead === 'reading' ? (
+            <>
+              <span className="spinner" aria-hidden="true" /> {t.aadhaarReading}
+              {aadhaarNote && <span className="muted"> {aadhaarNote}</span>}
+            </>
+          ) : typed.length === 12 && !validAadhaar(typed) ? (
+            <span className="warn-text">{t.aadhaarInvalid}</span>
+          ) : aadhaarRead === 'found' && validAadhaar(typed) ? (
+            <span className="ok-text">{t.aadhaarRead(maskAadhaar(typed.slice(-4)))}</span>
+          ) : validAadhaar(typed) ? (
+            <span className="ok-text">{t.aadhaarValid}</span>
+          ) : aadhaarRead === 'missing' ? (
+            <span className="warn-text">{t.aadhaarNotFound}</span>
+          ) : !typed && profile.aadhaar_last4 ? (
+            <span className="ok-text">✓ {t.aadhaarSavedAs(maskAadhaar(profile.aadhaar_last4))}</span>
+          ) : null}
+        </p>
+        <p className="hint">{t.aadhaarPrivacy}</p>
+      </div>
+
       {error && (
         <p className="error" role="alert">
           {error}
         </p>
       )}
       <p className="hint">{t.getApp}</p>
-      <button className="btn primary wide" onClick={onDone} disabled={!allRequired || working !== null}>
+      <button
+        className="btn primary wide"
+        onClick={() => void next()}
+        disabled={!allRequired || !aadhaarOk || working !== null || saving || aadhaarRead === 'reading'}
+      >
         {t.continue}
       </button>
     </StepFrame>
   )
 }
+
+const todayLocal = () => new Date().toLocaleDateString('en-CA') // YYYY-MM-DD in the phone's timezone
+const dmy = (iso: string) => iso.split('-').reverse().join('-')
 
 const GROUPS: LicenceGroup[] = ['two_wheeler', 'four_wheeler', 'heavy']
 const inGroup = (codes: string[], g: LicenceGroup) => codes.some((c) => (LICENCE_GROUPS[g] as readonly string[]).includes(c))
@@ -604,6 +730,8 @@ function LicenceStep({
   const [validTill, setValidTill] = useState(profile.licence_valid_till ?? '')
   const [source, setSource] = useState<string>(profile.licence_source ?? 'manual')
   const [rawText, setRawText] = useState<string | null>(null)
+  // What the photo said, to show under each field and to warn when it isn't a licence
+  const [fromPhoto, setFromPhoto] = useState<ParsedLicence | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   // Photos picked in this visit, kept for in-browser reading; text read from each side
@@ -626,6 +754,7 @@ function LicenceStep({
       setSource(how)
       setRawText(text)
     }
+    setFromPhoto(result)
     setReadOk(found)
   }
 
@@ -665,6 +794,7 @@ function LicenceStep({
     if (!file) return
     setError(null)
     setReadOk(null) // the earlier result is out of date until this photo has been read
+    setFromPhoto(null)
     setWorking(side)
     try {
       files.current[side] = await uploadDocument(side, file, t.tooBig)
@@ -703,7 +833,10 @@ function LicenceStep({
   }
 
   const bothUploaded = LICENCE_SIDES.every((s) => uploaded.has(s))
-  const canSave = bothUploaded && number.replace(/[\s-]/g, '').length >= 8 && GROUPS.some((g) => inGroup(codes, g))
+  const expired = Boolean(validTill) && validTill < todayLocal()
+  const canSave = bothUploaded && !expired && number.replace(/[\s-]/g, '').length >= 8 && GROUPS.some((g) => inGroup(codes, g))
+  const numberFromPhoto = fromPhoto?.licence_number && fromPhoto.licence_number === number.replace(/[\s-]/g, '')
+  const dateFromPhoto = fromPhoto?.valid_till && fromPhoto.valid_till === validTill
 
   return (
     <StepFrame title={t.stepLicence} onBack={onBack}>
@@ -746,8 +879,15 @@ function LicenceStep({
           {readNote && <span className="muted"> {readNote}</span>}
         </p>
       )}
-      {readOk === true && <p className="notice ok">{t.readDone}</p>}
       {readOk === false && <p className="notice">{t.readFailed}</p>}
+      {fromPhoto && !reading && (
+        <p className={`photo-check ${fromPhoto.looks_like_licence ? 'good' : 'bad'}`} role="status">
+          <span className="icon" aria-hidden="true">
+            {fromPhoto.looks_like_licence ? '✓' : '!'}
+          </span>
+          <span>{fromPhoto.looks_like_licence ? t.photoIsLicence : t.photoNotLicence}</span>
+        </p>
+      )}
 
       <form onSubmit={save}>
         <label htmlFor="licence">{t.licenceNumber}</label>
@@ -761,7 +901,13 @@ function LicenceStep({
           placeholder="TN38 20200001234"
           maxLength={20}
           autoComplete="off"
+          aria-describedby="licence-note"
         />
+        {numberFromPhoto && (
+          <p id="licence-note" className="field-note ok-text">
+            ✓ {t.fromPhoto}: {fromPhoto!.licence_number} — {t.checkIt}
+          </p>
+        )}
         <fieldset className="chips">
           <legend>{t.licenceClasses}</legend>
           {GROUPS.map((g) => (
@@ -777,9 +923,37 @@ function LicenceStep({
             </button>
           ))}
         </fieldset>
-        {codes.length > 0 && <p className="hint">{t.readFrom(codes.join(', '))}</p>}
+        {codes.length > 0 && (
+          <>
+            <p className="field-note">
+              <strong>{t.allowedToDrive}</strong>
+              {fromPhoto?.classes.length ? <span className="muted">({t.fromPhoto})</span> : null}
+            </p>
+            <ul className="class-list">
+              {codes.map((c) => (
+                <li key={c}>
+                  <span className="class-code">{displayClass(c)}</span>
+                  <span>{t.classInfo[c] ?? ''}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         <label htmlFor="valid">{t.validTill}</label>
-        <input id="valid" type="date" value={validTill} onChange={(e) => setValidTill(e.target.value)} />
+        <input
+          id="valid"
+          type="date"
+          value={validTill}
+          onChange={(e) => setValidTill(e.target.value)}
+          aria-invalid={expired}
+          aria-describedby="valid-note"
+        />
+        {validTill && (
+          <p id="valid-note" className={`field-note ${expired ? 'warn-text' : 'ok-text'}`} role={expired ? 'alert' : undefined}>
+            {expired ? t.licenceExpired(dmy(validTill)) : `✓ ${t.licenceValidTill(dmy(validTill))}`}
+            {dateFromPhoto && !expired && <span className="muted"> · {t.fromPhoto}</span>}
+          </p>
+        )}
         {error && (
           <p className="error" role="alert">
             {error}

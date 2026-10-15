@@ -41,6 +41,10 @@ After registering (same OTP), people go straight to their dashboard.
 
 **Licence reading:** in the driver's *Driving licence* step, the photos are read automatically. If the user-service has `OCR_PROVIDER=textract`, AWS Textract reads them on the server; otherwise the browser reads them with Tesseract.js (downloads about 10 MB from cdn.jsdelivr.net the first time). Either way the text goes to the user-service's parser, which finds the licence number, validity and vehicle classes (MCWG → two-wheeler, LMV → car, HMV/HGMV/HPMV → heavy). The driver confirms and an admin checks against the photo before approving.
 
+- **Licence check:** the page says whether the photo reads like a real licence (wording such as *Indian Union Driving Licence* / *Transport Department*, plus number and dates), shows the number, each class with its meaning (MCWG, LMV, LMV-TR …) and the expiry under its field. An expired licence can't be saved.
+- **Aadhaar:** in *Documents*, the Aadhaar photo is read the same way and the number appears under the *Aadhaar number* field. It is checked (12 digits, Verhoeff check digit) and **only the last 4 digits are stored**.
+- **Car number:** customers can tap 📷 next to *Car number* to photograph the number plate or the RC (a screenshot works too). The photo is read in the browser and never uploaded.
+
 A phone number belongs to one role: if a driver's number is used on the customer page (or the other way round), the page says so and links to the right one.
 
 Browser location only works on `https://` or `localhost`.

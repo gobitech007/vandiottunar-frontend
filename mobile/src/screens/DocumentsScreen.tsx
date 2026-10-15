@@ -2,9 +2,10 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator'
 import * as ImagePicker from 'expo-image-picker'
 import { useEffect, useState } from 'react'
 import { Linking, Text, View } from 'react-native'
-import { api, type DocType, type DocumentInfo } from '../api'
+import { aadhaarDigits, formatAadhaar, maskAadhaar, validAadhaar } from '../aadhaar'
+import { api, type DocType, type DocumentInfo, type Profile } from '../api'
 import { errorText, useT } from '../i18n'
-import { Button, Card, colors, ErrorText, Screen, styles } from '../ui'
+import { Button, Card, colors, ErrorText, Field, Screen, styles } from '../ui'
 
 // Licence photos are taken on the licence screen
 const DOCS: { type: DocType; required: boolean; front?: boolean }[] = [
@@ -20,8 +21,22 @@ export async function compress(uri: string): Promise<string> {
   return saved.uri
 }
 
-export default function DocumentsScreen({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
+export default function DocumentsScreen({
+  profile,
+  serverOcr,
+  onDone,
+  onBack,
+}: {
+  profile: Profile
+  serverOcr: boolean
+  onDone: () => void
+  onBack: () => void
+}) {
   const { t } = useT()
+  const [aadhaar, setAadhaar] = useState('')
+  const [aadhaarSource, setAadhaarSource] = useState('manual')
+  const [aadhaarState, setAadhaarState] = useState<'reading' | 'found' | null>(null)
+  const [saving, setSaving] = useState(false)
   const [uploaded, setUploaded] = useState<Set<DocType>>(new Set())
   const [working, setWorking] = useState<DocType | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -59,6 +74,7 @@ export default function DocumentsScreen({ onDone, onBack }: { onDone: () => void
       const uri = await compress(result.assets[0].uri)
       await api.upload(`/drivers/me/documents/${type}`, { uri, name: `${type}.jpg`, type: 'image/jpeg' })
       setUploaded((prev) => new Set(prev).add(type))
+      if (type === 'id_proof' && serverOcr) void scanAadhaar()
     } catch (err) {
       setError(errorText(err, t))
     } finally {
@@ -66,7 +82,52 @@ export default function DocumentsScreen({ onDone, onBack }: { onDone: () => void
     }
   }
 
+  // Server OCR (when enabled) reads the number; otherwise the driver types it
+  async function scanAadhaar() {
+    setAadhaarState('reading')
+    try {
+      const r = await api.post<{ aadhaar_number: string | null }>('/drivers/me/aadhaar/scan')
+      if (r.aadhaar_number) {
+        setAadhaar(formatAadhaar(r.aadhaar_number))
+        setAadhaarSource('ocr_server')
+        setAadhaarState('found')
+        return
+      }
+    } catch {
+      // fall through: typed by hand
+    }
+    setAadhaarState(null)
+  }
+
   const allRequired = DOCS.filter((d) => d.required).every((d) => uploaded.has(d.type))
+  const typed = aadhaarDigits(aadhaar)
+  const aadhaarOk = typed ? validAadhaar(typed) : Boolean(profile.aadhaar_last4)
+  const note =
+    aadhaarState === 'reading'
+      ? { text: t.aadhaarReading, color: colors.muted }
+      : typed.length === 12 && !validAadhaar(typed)
+        ? { text: t.aadhaarInvalid, color: colors.danger }
+        : validAadhaar(typed)
+          ? { text: aadhaarState === 'found' ? t.aadhaarRead(maskAadhaar(typed.slice(-4))) : t.aadhaarValid, color: colors.ok }
+          : !typed && profile.aadhaar_last4
+            ? { text: `✓ ${t.aadhaarSavedAs(maskAadhaar(profile.aadhaar_last4))}`, color: colors.ok }
+            : null
+
+  async function next() {
+    setError(null)
+    if (typed) {
+      setSaving(true)
+      try {
+        await api.put('/drivers/me/aadhaar', { aadhaar_number: typed, source: aadhaarSource })
+      } catch (err) {
+        setError(errorText(err, t))
+        return
+      } finally {
+        setSaving(false)
+      }
+    }
+    onDone()
+  }
 
   return (
     <Screen title={t.stepDocuments} onBack={onBack}>
@@ -112,8 +173,29 @@ export default function DocumentsScreen({ onDone, onBack }: { onDone: () => void
           </Card>
         )
       })}
+      <Card>
+        <Field
+          label={t.aadhaarNumber}
+          value={aadhaar}
+          onChangeText={(v) => {
+            setAadhaar(formatAadhaar(v))
+            setAadhaarSource('manual')
+            if (aadhaarState === 'found') setAadhaarState(null)
+          }}
+          keyboardType="number-pad"
+          placeholder="XXXX XXXX XXXX"
+          maxLength={14}
+        />
+        {note && <Text style={{ fontWeight: '700', color: note.color }}>{note.text}</Text>}
+        <Text style={{ color: colors.muted }}>{t.aadhaarPrivacy}</Text>
+      </Card>
       <ErrorText>{error}</ErrorText>
-      <Button label={t.continue} onPress={onDone} disabled={!allRequired || working !== null} />
+      <Button
+        label={t.continue}
+        onPress={next}
+        busy={saving}
+        disabled={!allRequired || !aadhaarOk || working !== null || aadhaarState === 'reading'}
+      />
     </Screen>
   )
 }

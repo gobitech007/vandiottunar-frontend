@@ -9,6 +9,7 @@ import {
   type DriverDetail as Detail,
   type LicenceGroup,
 } from '../api'
+import { displayClass } from '../public/idNumbers'
 
 const mapLink = (lat: number, lng: number) => `https://www.google.com/maps?q=${lat},${lng}`
 
@@ -196,7 +197,7 @@ export default function DriverDetail() {
             ))}
           </dd>
           <dt>Class codes</dt>
-          <dd>{driver.licence_classes.join(', ') || '—'}</dd>
+          <dd>{driver.licence_classes.map(displayClass).join(', ') || '—'}</dd>
           <dt>Valid till</dt>
           <dd>
             {driver.licence_valid_till ?? '—'}
@@ -206,6 +207,29 @@ export default function DriverDetail() {
           </dd>
           <dt>Details were</dt>
           <dd>{SOURCE[driver.licence_source ?? 'manual'] ?? driver.licence_source}</dd>
+          <dt>Photo check</dt>
+          <dd>
+            {driver.licence_wording_found == null ? (
+              <span className="muted">Not read from a photo</span>
+            ) : driver.licence_wording_found ? (
+              <span className="pill ok">✓ Licence wording found</span>
+            ) : (
+              <span className="pill">✗ No licence wording in the photo text: check the photo is a real licence</span>
+            )}
+          </dd>
+          <dt>Aadhaar</dt>
+          <dd>
+            {driver.aadhaar_last4 ? (
+              <>
+                <strong>XXXX XXXX {driver.aadhaar_last4}</strong>{' '}
+                <span className="muted">
+                  ({SOURCE[driver.aadhaar_source ?? 'manual'] ?? driver.aadhaar_source}; only the last 4 digits are kept)
+                </span>
+              </>
+            ) : (
+              '—'
+            )}
+          </dd>
           <dt>Checked by admin</dt>
           <dd>{driver.licence_verified ? <span className="pill ok">Yes</span> : <span className="pill">Not yet</span>}</dd>
         </dl>

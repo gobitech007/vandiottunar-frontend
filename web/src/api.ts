@@ -159,7 +159,10 @@ export interface DriverDetail extends DriverSummary {
   licence_valid_till: string | null
   licence_source: string | null
   licence_verified: boolean
+  aadhaar_last4: string | null
   licence_raw_text: string | null
+  licence_wording_found: boolean | null
+  aadhaar_source: string | null
   vehicle_types: string[]
   availability: string | null
   expected_pay_note: string | null
@@ -227,6 +230,7 @@ export interface DriverProfile {
   two_wheeler: boolean
   four_wheeler: boolean
   heavy_vehicle: boolean
+  aadhaar_last4: string | null
   experience_years: number | null
   vehicle_types: string[]
   availability: string | null
@@ -245,6 +249,7 @@ export interface DriverProfile {
 export interface Checklist {
   profile_complete: boolean
   licence_complete: boolean
+  aadhaar_captured: boolean
   server_ocr_available: boolean
   location_captured: boolean
   consent_accepted: boolean
@@ -288,7 +293,16 @@ export interface ParsedLicence {
   two_wheeler: boolean
   four_wheeler: boolean
   heavy: boolean
+  wording_found: boolean
+  looks_like_licence: boolean
+  expired: boolean
   raw_text: string | null
+}
+
+export interface ParsedAadhaar {
+  aadhaar_number: string | null
+  masked: string | null
+  wording_found: boolean
 }
 
 // ---- Bookings (order-service) ----

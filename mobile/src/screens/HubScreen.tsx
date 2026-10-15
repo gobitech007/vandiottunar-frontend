@@ -37,7 +37,7 @@ export default function HubScreen({
     {
       key: 'documents',
       title: t.stepDocuments,
-      done: !checklist.missing_documents.some((d) => !LICENCE_SIDES.includes(d)),
+      done: checklist.aadhaar_captured && !checklist.missing_documents.some((d) => !LICENCE_SIDES.includes(d)),
     },
   ]
   const next = steps.find((s) => !s.done)

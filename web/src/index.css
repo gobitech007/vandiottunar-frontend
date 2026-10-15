@@ -264,3 +264,19 @@ textarea { resize: vertical; }
 .muted-row td { color: var(--muted); }
 .results { margin: 0.5rem 0 0; padding-left: 1.25rem; }
 .page .row-between .tabs { margin-bottom: 0; }
+
+/* Values read from photos, shown right under their field */
+.input-with-action { display: flex; gap: 0.5rem; align-items: stretch; }
+.input-with-action input { flex: 1; min-width: 0; }
+.input-with-action label.btn { flex: none; margin: 0; min-width: 48px; display: flex; align-items: center; justify-content: center; font-size: 1.15rem; padding-inline: 0.75rem; }
+.field-note { margin: 0.35rem 0 0; font-size: 0.9rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.warn-text { color: var(--danger); font-weight: 600; }
+.photo-check { display: flex; gap: 0.6rem; align-items: flex-start; border-radius: var(--radius); padding: 0.7rem 0.9rem; margin: 0.75rem 0 0; font-weight: 600; }
+.photo-check.good { background: #dcefe3; color: #12502f; }
+.photo-check.bad { background: #fbe4dc; color: #7a2410; }
+.photo-check .icon { font-size: 1.1rem; line-height: 1.3; }
+.class-list { list-style: none; padding: 0; margin: 0.6rem 0 0; display: grid; gap: 0.35rem; }
+.class-list li { display: flex; gap: 0.6rem; align-items: baseline; font-size: 0.95rem; }
+.class-code { flex: none; font-weight: 800; font-size: 0.85rem; letter-spacing: 0.02em; background: var(--green); color: var(--cream); border-radius: 6px; padding: 0.1rem 0.45rem; min-width: 4.2rem; text-align: center; }
+.doc-extra { margin: 0 0 1rem; padding: 0.85rem 1rem 1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.doc-extra label { margin-top: 0; }

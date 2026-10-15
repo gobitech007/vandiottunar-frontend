@@ -15,6 +15,7 @@ import {
 } from '../api'
 import { useT } from '../i18n'
 import BookingFields, { createBooking, draftReady, emptyDraft, type BookingDraft } from './BookingFields'
+import CarNumberField from './CarNumberField'
 import { cleanCarNumber, validCarNumber } from './CustomerRegister'
 import PublicShell from './PublicShell'
 
@@ -383,15 +384,7 @@ function NewBooking({
     <form className="card" onSubmit={submit}>
       <h2 className="sub">{t.bookDriver}</h2>
       <BookingFields value={draft} onChange={setDraft} />
-      <label htmlFor="nb-car">{t.carNumber}</label>
-      <input
-        id="nb-car"
-        value={carNumber}
-        onChange={(e) => setCarNumber(e.target.value.toUpperCase())}
-        placeholder={t.carNumberPh}
-        maxLength={16}
-        aria-invalid={!carOk}
-      />
+      <CarNumberField id="nb-car" label={t.carNumber} value={carNumber} onChange={setCarNumber} invalid={!carOk} />
       {error && (
         <p className="error" role="alert">
           {error}

@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError, getUserSession, setUserSession, userApi, type CustomerProfile, type UserSession } from '../api'
 import { useT } from '../i18n'
 import BookingFields, { createBooking, draftReady, emptyDraft, type BookingDraft } from './BookingFields'
+import CarNumberField from './CarNumberField'
 import PhoneOtp from './PhoneOtp'
 import PublicShell from './PublicShell'
 import WrongRole from './WrongRole'
@@ -179,15 +180,12 @@ function CustomerForm({
           />
         </>
       )}
-      <label htmlFor="c-car">{isEmployer ? t.carNumberOptional : t.carNumber}</label>
-      <input
+      <CarNumberField
         id="c-car"
+        label={isEmployer ? t.carNumberOptional : t.carNumber}
         value={carNumber}
-        onChange={(e) => setCarNumber(e.target.value.toUpperCase())}
-        placeholder={t.carNumberPh}
-        maxLength={16}
-        autoComplete="off"
-        aria-invalid={Boolean(carNumber.trim()) && !validCarNumber(carNumber)}
+        onChange={setCarNumber}
+        invalid={Boolean(carNumber.trim()) && !validCarNumber(carNumber)}
       />
       <label htmlFor="c-email">{t.email}</label>
       <input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
