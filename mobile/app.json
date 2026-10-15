@@ -25,15 +25,19 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "blockedPermissions": ["android.permission.RECORD_AUDIO"],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO"
+      ],
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Vandi Ottunar uses your location to find customers and driver jobs near you.",
-          "isAndroidBackgroundLocationEnabled": false
+          "locationWhenInUsePermission": "Vandi Ottunar uses your location to find jobs near you and, during a trip, to show the customer where you are.",
+          "locationAlwaysAndWhenInUsePermission": "During a trip, Vandi Ottunar shares your location with the customer even when the screen is off. Sharing stops when you enter the end code.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       [

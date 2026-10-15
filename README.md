@@ -35,6 +35,7 @@ npm run dev              # http://localhost:5173
 | `/register/customer` | Choose *Car owner* or *Business* → OTP → name, pincode, needs (company for businesses) → done |
 | `/login` | One sign-in for everyone: drivers and customers go to their dashboard, admins to the admin panel |
 | `/dashboard` | **Driver:** status, then assigned customers (name, phone, car number, pickup, dates). **Customer:** bookings with the assigned driver's name and phone, and *Book a driver* |
+| Trips | The customer's booking shows a **start code**; the driver taps *Start trip* and enters it. Then the customer sees an **end code** and a **live map** of the driver (refreshes every 10 s); the driver enters the end code to finish. Admin: *Bookings → On a trip* shows the same map |
 | `/admin` | Admin panel: **Drivers**, **Bookings** (auto-assign all waiting, or open a booking to assign manually from ranked drivers) and **Customers** |
 
 After registering (same OTP), people go straight to their dashboard.
@@ -87,7 +88,11 @@ eas build --platform android --profile production   # AAB for the Play Store
 
 Set `EXPO_PUBLIC_API_URL` to your HTTPS API domain (e.g. `https://api.vandiottunar.in`) in the EAS build environment.
 
-Android package: `in.vandiottunar.driver`. Location is requested only while the app is in use; background location and microphone are disabled.
+Android package: `in.vandiottunar.driver`. Microphone is disabled.
+
+**Trip location in the app:** when a driver starts a trip, the app explains why it needs location, then asks for "Allow all the time". With that, a foreground service (a visible notification) keeps sending GPS every ~15 s with the screen off, until the end code. Without it, the app shares only while it is open. Background location needs a **development or EAS build**: Expo Go can't run it. For the Play Store you must fill in the *Location permissions* declaration (background location for "trip tracking during a booked trip") and upload a short video of the disclosure screen.
+
+On the website, the driver's browser shares location while the page is open (the screen is kept on where the browser allows).
 
 ## Checks
 

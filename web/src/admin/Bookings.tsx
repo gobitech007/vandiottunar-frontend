@@ -5,6 +5,7 @@ import { adminOrderApi, formatWhen, type AdminBooking, type AutoAssignResult, ty
 const TABS: { value: BookingStatus; title: string }[] = [
   { value: 'pending', title: 'Waiting for a driver' },
   { value: 'assigned', title: 'Assigned' },
+  { value: 'in_progress', title: 'On a trip' },
   { value: 'completed', title: 'Completed' },
   { value: 'cancelled', title: 'Cancelled' },
 ]

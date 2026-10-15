@@ -18,6 +18,8 @@ import BookingFields, { createBooking, draftReady, emptyDraft, type BookingDraft
 import CarNumberField from './CarNumberField'
 import { cleanCarNumber, validCarNumber } from './CustomerRegister'
 import PublicShell from './PublicShell'
+import CustomerTrip from '../trip/CustomerTrip'
+import DriverTrip from '../trip/DriverTrip'
 
 /** Where drivers and customers land after registering or logging in. */
 export default function Dashboard() {
@@ -99,14 +101,13 @@ function DriverDashboard() {
     void load()
   }, [load])
 
-  async function markDone(id: string) {
-    try {
-      await orderApi(`/driver/bookings/${id}/complete`, { method: 'POST' })
-      await load()
-    } catch (err) {
-      setError((err as Error).message)
-    }
-  }
+  // New assignments, or a trip the admin closed, show up without a reload
+  const approved = profile?.status === 'approved'
+  useEffect(() => {
+    if (!approved) return
+    const timer = window.setInterval(() => void load(), 30_000)
+    return () => window.clearInterval(timer)
+  }, [approved, load])
 
   if (!profile) return error ? <p className="error">{error}</p> : <p className="muted">…</p>
 
@@ -152,9 +153,12 @@ function DriverDashboard() {
     )
   }
 
-  const upcoming = (jobs ?? []).filter((j) => j.status === 'assigned').reverse() // soonest first
+  // A running trip first, then the rest soonest first
+  const upcoming = (jobs ?? [])
+    .filter((j) => j.status === 'assigned' || j.status === 'in_progress')
+    .reverse()
+    .sort((a, b) => Number(b.status === 'in_progress') - Number(a.status === 'in_progress'))
   const past = (jobs ?? []).filter((j) => j.status === 'completed')
-  const now = Date.now()
 
   return (
     <>
@@ -171,7 +175,9 @@ function DriverDashboard() {
         {upcoming.map((j) => (
           <li key={j.id} className="card booking">
             <div className="booking-top">
-              <span className="pill">{t.bookingTypeLabels[j.booking_type]}</span>
+              <span className={`pill ${j.status === 'in_progress' ? 'status-in_progress' : ''}`}>
+                {j.status === 'in_progress' ? t.statusLabels.in_progress : t.bookingTypeLabels[j.booking_type]}
+              </span>
               <span className="muted">{j.reference}</span>
             </div>
             <When b={j} />
@@ -192,11 +198,7 @@ function DriverDashboard() {
             </p>
             <Pickup b={j} />
             {j.notes && <p className="note">“{j.notes}”</p>}
-            {new Date(j.start_at).getTime() <= now && (
-              <button className="btn" onClick={() => void markDone(j.id)}>
-                {t.markDone}
-              </button>
-            )}
+            <DriverTrip job={j} onChange={load} />
           </li>
         ))}
       </ul>
@@ -211,6 +213,7 @@ function DriverDashboard() {
                 <When b={j} />
                 <p>
                   {j.customer_name} · {j.car_number}
+                  {j.started_at && ` · ${t.travelled((j.distance_m / 1000).toFixed(1))}`}
                 </p>
               </li>
             ))}
@@ -250,6 +253,13 @@ function CustomerDashboard() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const watching = (bookings ?? []).some((b) => b.status === 'pending' || b.status === 'assigned' || b.status === 'in_progress')
+  useEffect(() => {
+    if (!watching) return
+    const timer = window.setInterval(() => void load(), 20_000)
+    return () => window.clearInterval(timer)
+  }, [watching, load])
 
   async function cancel(id: string) {
     if (confirming !== id) {
@@ -322,7 +332,7 @@ function CustomerDashboard() {
               {b.car_number && <strong> · {b.car_number}</strong>}
             </p>
             <Pickup b={b} />
-            {b.status === 'assigned' && b.driver_name && (
+            {(b.status === 'assigned' || b.status === 'in_progress') && b.driver_name && (
               <div className="person">
                 <div>
                   <span className="muted">{t.yourDriver}</span>
@@ -335,6 +345,7 @@ function CustomerDashboard() {
                 )}
               </div>
             )}
+            <CustomerTrip b={b} />
             {b.status === 'pending' && <p className="muted">{t.findingDriver}</p>}
             {(b.status === 'pending' || b.status === 'assigned') && (
               <button className={`btn ${confirming === b.id ? 'danger' : ''}`} onClick={() => void cancel(b.id)}>

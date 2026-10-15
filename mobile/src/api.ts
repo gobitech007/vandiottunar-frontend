@@ -129,7 +129,16 @@ export const DEFAULT_CODE: Record<LicenceGroup, string> = { two_wheeler: 'MCWG',
 
 export const orderApi = {
   get: <T>(path: string) => send<T>(path, { method: 'GET' }, ORDER_API_URL),
-  post: <T>(path: string) => send<T>(path, { method: 'POST' }, ORDER_API_URL),
+  post: <T>(path: string, body?: unknown) =>
+    send<T>(
+      path,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      },
+      ORDER_API_URL,
+    ),
 }
 
 export interface Assignment {
@@ -146,7 +155,9 @@ export interface Assignment {
   pickup_lat: number | null
   pickup_lng: number | null
   notes: string | null
-  status: 'assigned' | 'completed'
+  status: 'assigned' | 'in_progress' | 'completed'
+  started_at: string | null
+  distance_m: number
   customer_name: string | null
   customer_phone: string
   company_name: string | null

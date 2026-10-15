@@ -3,6 +3,7 @@ import { Linking, Text, View } from 'react-native'
 import { formatWhen, orderApi, type Assignment, type Profile } from '../api'
 import { errorText, useT } from '../i18n'
 import { Button, Card, colors, ErrorText, Screen, styles } from '../ui'
+import TripPanel from './TripPanel'
 
 export default function StatusScreen({
   profile,
@@ -35,7 +36,11 @@ export default function StatusScreen({
     void loadJobs()
   }, [loadJobs])
 
-  const upcoming = (jobs ?? []).filter((j) => j.status === 'assigned').reverse()
+  // A running trip first, then the rest soonest first
+  const upcoming = (jobs ?? [])
+    .filter((j) => j.status === 'assigned' || j.status === 'in_progress')
+    .reverse()
+    .sort((a, b) => Number(b.status === 'in_progress') - Number(a.status === 'in_progress'))
 
   return (
     <Screen>
@@ -70,7 +75,9 @@ export default function StatusScreen({
           {upcoming.map((j) => (
             <Card key={j.id}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                <Text style={{ fontWeight: '800', color: colors.green }}>{t.tripLabels[j.booking_type]}</Text>
+                <Text style={{ fontWeight: '800', color: j.status === 'in_progress' ? colors.ok : colors.green }}>
+                  {j.status === 'in_progress' ? `● ${t.onTrip}` : t.tripLabels[j.booking_type]}
+                </Text>
                 <Text style={styles.muted}>{j.reference}</Text>
               </View>
               <Text style={{ fontSize: 17, fontWeight: '800', color: colors.ink }}>{formatWhen(j.start_at)}</Text>
@@ -98,6 +105,7 @@ export default function StatusScreen({
                   </View>
                 )}
               </View>
+              <TripPanel job={j} onChange={loadJobs} />
             </Card>
           ))}
           <Button label={t.refresh} variant="secondary" onPress={() => void loadJobs()} />

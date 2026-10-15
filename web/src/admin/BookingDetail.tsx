@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { adminOrderApi, formatWhen, mapLink, type AdminBooking, type AutoAssignResult, type Candidate } from '../api'
+import { adminOrderApi, formatWhen, mapLink, type AdminBooking, type AutoAssignResult, type Candidate, type Track } from '../api'
+import { EnglishOnly } from '../i18n'
+import LiveTrip from '../trip/LiveTrip'
 import { TYPE, VEHICLE } from './Bookings'
 
 const STATUS: Record<string, string> = {
   pending: 'Waiting for a driver',
   assigned: 'Assigned',
+  in_progress: 'On a trip',
   completed: 'Completed',
   cancelled: 'Cancelled',
 }
@@ -33,6 +36,8 @@ export default function BookingDetail() {
   useEffect(() => {
     void load()
   }, [load])
+
+  const tripLoad = useCallback(() => adminOrderApi<Track>(`/admin/bookings/${id}/track`), [id])
 
   async function run(fn: () => Promise<unknown>, done?: string) {
     setBusy(true)
@@ -88,7 +93,7 @@ export default function BookingDetail() {
             {TYPE[booking.booking_type]} · {VEHICLE[booking.vehicle_class]} · booked {formatWhen(booking.created_at)}
           </p>
         </div>
-        <span className={`status status-${booking.status === 'pending' ? 'submitted' : booking.status === 'assigned' ? 'approved' : booking.status === 'cancelled' ? 'rejected' : 'draft'}`}>
+        <span className={`status status-${booking.status === 'pending' ? 'submitted' : booking.status === 'assigned' || booking.status === 'in_progress' ? 'approved' : booking.status === 'cancelled' ? 'rejected' : 'draft'}`}>
           {STATUS[booking.status]}
         </span>
       </header>
@@ -152,6 +157,37 @@ export default function BookingDetail() {
         </section>
       </div>
 
+      {(booking.status === 'in_progress' || (booking.status === 'completed' && booking.started_at)) && (
+        <section className="card">
+          <h2>Trip</h2>
+          <p>
+            <strong>{booking.driver_name}</strong> · <a href={`tel:${booking.driver_phone}`}>{booking.driver_phone}</a>
+            <span className="muted">
+              {' '}
+              · started with the customer's code {formatWhen(booking.started_at)}
+              {booking.completed_at && ` · ended ${formatWhen(booking.completed_at)}`}
+            </span>
+          </p>
+          <EnglishOnly>
+            <LiveTrip key={booking.status} load={tripLoad} live={booking.status === 'in_progress'} />
+          </EnglishOnly>
+          {booking.status === 'in_progress' && (
+            <p>
+              <button
+                className="btn"
+                disabled={busy}
+                onClick={() =>
+                  void run(() => adminOrderApi(`/admin/bookings/${id}/complete`, { method: 'POST' }), 'Trip completed by admin.')
+                }
+              >
+                Complete without the end code
+              </button>{' '}
+              <span className="hint">Only if the driver can't enter the code (phone dead, no signal).</span>
+            </p>
+          )}
+        </section>
+      )}
+
       {booking.status === 'assigned' && (
         <section className="card">
           <h2>Driver</h2>
@@ -178,6 +214,7 @@ export default function BookingDetail() {
           >
             Mark completed
           </button>
+          <p className="hint">The driver starts the trip with the start code the customer sees in their bookings.</p>
         </section>
       )}
 

@@ -307,7 +307,7 @@ export interface ParsedAadhaar {
 
 // ---- Bookings (order-service) ----
 
-export type BookingStatus = 'pending' | 'assigned' | 'completed' | 'cancelled'
+export type BookingStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
 export type BookingType = 'on_demand' | 'job'
 export type VehicleClass = 'two_wheeler' | 'four_wheeler' | 'heavy'
 
@@ -330,8 +330,35 @@ export interface Booking {
   driver_name: string | null
   driver_phone: string | null
   assigned_at: string | null
+  started_at: string | null
+  completed_at: string | null
+  distance_m: number
+  last_location_at: string | null
   cancel_reason: string | null
   created_at: string
+  // Only in the customer's own bookings
+  start_code?: string | null
+  end_code?: string | null
+}
+
+export interface TrackPoint {
+  lat: number
+  lng: number
+  recorded_at: string
+  accuracy_m: number | null
+}
+
+export interface Track {
+  booking_id: string
+  status: BookingStatus
+  started_at: string | null
+  completed_at: string | null
+  distance_km: number
+  last: TrackPoint | null
+  path: [number, number][]
+  pickup_lat: number | null
+  pickup_lng: number | null
+  driver_name: string | null
 }
 
 export interface DriverBooking extends Booking {
