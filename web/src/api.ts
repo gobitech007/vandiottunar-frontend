@@ -85,7 +85,13 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
       body: options.form ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
     })
   } catch {
-    throw new ApiError(0, 'Could not reach the server. Check your internet connection and try again.')
+    const base = options.base ?? API_URL
+    throw new ApiError(
+      0,
+      import.meta.env.DEV
+        ? `Could not reach ${base}. Is that server running? (If it is, check its CORS_ORIGINS includes ${window.location.origin}.)`
+        : 'Could not reach the server. Check your internet connection and try again.',
+    )
   }
   const text = await res.text()
   let body: unknown = null
