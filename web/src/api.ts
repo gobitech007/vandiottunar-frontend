@@ -130,6 +130,7 @@ export const paymentApi = <T>(path: string, options: Omit<RequestOptions, 'scope
 
 export interface Payment {
   id: string
+  purpose: 'booking_confirmation' | 'cancellation_fee'
   booking_id: string
   amount_paise: number
   status: 'created' | 'paid' | 'failed' | 'expired'
@@ -297,8 +298,18 @@ export interface CustomerProfile {
   needs: string[]
   vehicle_note: string | null
   car_number: string | null
+  current_policy_version: string
+  policy_accepted: boolean
+  policy_accepted_at: string | null
   profile_complete: boolean
   created_at: string
+}
+
+/** Fees shown in the booking & cancellation policy (order-service GET /bookings/policy) */
+export interface BookingPolicy {
+  confirmation_fee_paise: number
+  cancellation_fee_paise: number
+  cancellation_fee_applies: 'assigned' | 'always' | 'never'
 }
 
 export interface AdminCustomer extends CustomerProfile {
@@ -355,6 +366,11 @@ export interface Booking {
   /** Encrypted WhatsApp relay link (customer: to the driver; driver: to the customer) */
   chat_url?: string | null
   fee_paise?: number
+  /** What cancelling now costs (0 = free); above 0 the customer pays it to cancel */
+  cancellation_fee_paise?: number
+  /** After a paid cancellation */
+  cancel_fee_status?: 'none' | 'paid'
+  cancel_fee_paise?: number
   started_at: string | null
   completed_at: string | null
   distance_m: number
@@ -398,6 +414,7 @@ export interface AdminBooking extends DriverBooking {
   driver_user_id: string | null
   driver_phone: string | null
   payment_id: string | null
+  cancel_payment_id: string | null
   assignment_mode: string | null
   cancelled_by: string | null
 }

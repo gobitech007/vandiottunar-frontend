@@ -52,6 +52,8 @@ export default function BookingCard({
   const [error, setError] = useState<string | null>(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
   const [route, setRoute] = useState(false)
+  const [feeOpen, setFeeOpen] = useState(false)
+  const cancelFee = b.cancellation_fee_paise ?? 0
   const confirmed = b.payment_status !== 'unpaid'
   const hasDriver = (b.status === 'assigned' || b.status === 'in_progress') && b.driver_name
 
@@ -72,6 +74,26 @@ export default function BookingCard({
       setError(errorText(err, t))
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function payToCancel() {
+    setBusy(true)
+    setError(null)
+    try {
+      const p = await paymentApi.post<Payment>(`/payments/booking/${b.id}/cancel`, { return_to: 'app' })
+      if (!p.pay_url) throw new Error(t.paymentFailed)
+      const result = await WebBrowser.openAuthSessionAsync(p.pay_url, RETURN_URL)
+      if (result.type === 'success') {
+        const ok = /[?&]payment=cancelled\b/.test(result.url)
+        onNotice(ok ? t.cancelledWithFee(rupees(cancelFee)) : t.paymentFailed, ok)
+      }
+      await onChanged()
+    } catch (err) {
+      setError(errorText(err, t))
+    } finally {
+      setBusy(false)
+      setFeeOpen(false)
     }
   }
 
@@ -157,8 +179,28 @@ export default function BookingCard({
         </>
       )}
       {b.status === 'pending' && <Text style={styles.muted}>{t.findingDriver}</Text>}
+      {b.status === 'cancelled' && b.cancel_fee_status === 'paid' && (
+        <Text style={styles.muted}>{t.cancelFeePaid(rupees(b.cancel_fee_paise))}</Text>
+      )}
       <ErrorText>{error}</ErrorText>
-      {(b.status === 'pending' || b.status === 'assigned') && (
+      {(b.status === 'pending' || b.status === 'assigned') && cancelFee > 0 && !feeOpen && (
+        <Button label={t.cancelWithFee(rupees(cancelFee))} variant="secondary" onPress={() => setFeeOpen(true)} disabled={busy} />
+      )}
+      {(b.status === 'pending' || b.status === 'assigned') && cancelFee > 0 && feeOpen && (
+        <View style={{ borderWidth: 1.5, borderColor: colors.danger, backgroundColor: '#FDF1EC', borderRadius: 12, padding: 12, gap: 8 }}>
+          <Text style={styles.body16}>{t.cancelFeeExplain(rupees(cancelFee))}</Text>
+          <Pressable
+            onPress={payToCancel}
+            disabled={busy}
+            accessibilityRole="button"
+            style={{ backgroundColor: colors.danger, minHeight: 50, borderRadius: 12, alignItems: 'center', justifyContent: 'center', opacity: busy ? 0.5 : 1 }}
+          >
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>{t.payToCancel(rupees(cancelFee))}</Text>
+          </Pressable>
+          <Button label={t.keepBooking} variant="ghost" onPress={() => setFeeOpen(false)} />
+        </View>
+      )}
+      {(b.status === 'pending' || b.status === 'assigned') && cancelFee === 0 && (
         <Button label={confirmCancel ? t.confirmCancel : t.cancelBooking} variant="secondary" onPress={cancel} disabled={busy} />
       )}
     </Card>

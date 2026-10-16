@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError, getUserSession, setUserSession, userApi, type CustomerProfile, type UserSession } from '../api'
 import { useT } from '../i18n'
 import BookingFields, { createBooking, draftReady, emptyDraft, type BookingDraft } from './BookingFields'
+import BookingPolicyBox from './BookingPolicyBox'
 import CarNumberField from './CarNumberField'
 import PhoneOtp from './PhoneOtp'
 import PublicShell from './PublicShell'
@@ -68,7 +69,8 @@ export default function CustomerRegister() {
       <CustomerForm
         profile={profile}
         isEmployer={session?.role === 'employer'}
-        withBooking={!profile.profile_complete}
+        // New customers book their first driver here; existing ones (e.g. only the policy changed) just save
+        withBooking={!profile.profile_complete && !(profile.full_name && profile.home_pincode)}
         onDone={(booked) => navigate('/dashboard', { replace: true, state: { booked } })}
       />
     )
@@ -124,6 +126,7 @@ function CustomerForm({
   const [needs, setNeeds] = useState<string[]>(profile.needs)
   const [vehicle, setVehicle] = useState(profile.vehicle_note ?? '')
   const [draft, setDraft] = useState<BookingDraft>(() => emptyDraft(isEmployer ? 'job' : 'on_demand'))
+  const [agreed, setAgreed] = useState(profile.policy_accepted)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -133,6 +136,7 @@ function CustomerForm({
     /^[1-9]\d{5}$/.test(pincode) &&
     carOk &&
     (!isEmployer || company.trim()) &&
+    agreed &&
     (withBooking ? draftReady(draft) : needs.length > 0)
 
   async function save(e: FormEvent) {
@@ -152,6 +156,7 @@ function CustomerForm({
       if (car) body.car_number = car
       if (email.trim()) body.email = email.trim()
       if (isEmployer) body.company_name = company.trim()
+      if (!profile.policy_accepted) body.accept_policy_version = profile.current_policy_version
       await userApi<CustomerProfile>('/customers/me', { method: 'PUT', body })
       if (withBooking) {
         await createBooking(draft, { car_number: car, pickup_pincode: pincode, pickup_area: area.trim() || null })
@@ -231,6 +236,11 @@ function CustomerForm({
         onChange={(e) => setVehicle(e.target.value)}
         placeholder={t.vehicleNotePh}
         maxLength={120}
+      />
+      <BookingPolicyBox
+        accepted={agreed}
+        onChange={setAgreed}
+        updated={!profile.policy_accepted && Boolean(profile.policy_accepted_at)}
       />
       {error && (
         <p className="error" role="alert">

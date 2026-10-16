@@ -160,6 +160,27 @@ const en = {
   findingDriver: 'We are finding a driver for you.',
   cancelBooking: 'Cancel booking',
   confirmCancel: 'Tap again to cancel',
+  policyTitle: 'Booking & cancellation policy',
+  policyPoints: (confirm: string, cancel: string, applies: string) =>
+    [
+      `When a driver is assigned to your booking, you pay ${confirm} to confirm it. Then you can chat with the driver and you get the trip start code.`,
+      applies === 'always'
+        ? `Cancelling a booking costs ${cancel}.`
+        : applies === 'never'
+          ? 'Cancelling a booking is free.'
+          : `Cancelling is free while we are still finding a driver. Once a driver is assigned, cancelling costs ${cancel}, because the driver has kept that time for you.`,
+      `The ${confirm} confirmation is not refunded if you cancel.`,
+      'If we cancel your booking (for example, when no driver is available), you pay no cancellation fee.',
+      'The trip starts only when you give the driver your start code, and ends when you give your end code.',
+    ] as string[],
+  policyAgree: 'I have read and agree to the booking & cancellation policy',
+  policyUpdated: 'Our booking & cancellation policy has changed. Please read it and agree to continue.',
+  cancelWithFee: (fee: string) => `Cancel booking (${fee} fee)`,
+  cancelFeeExplain: (fee: string) => `A driver is already assigned, so cancelling now costs ${fee}. Pay it to cancel the booking.`,
+  payToCancel: (fee: string) => `Pay ${fee} and cancel`,
+  keepBooking: 'Keep my booking',
+  cancelledWithFee: (fee: string) => `Booking cancelled. Cancellation fee ${fee} received.`,
+  cancelFeePaid: (fee: string) => `Cancellation fee ${fee} paid`,
   confirmTitle: (driver: string) => `${driver || 'A driver'} is ready for your booking`,
   confirmBody: (fee: string) => `Pay ${fee} to confirm. Then you can chat with your driver on WhatsApp and you'll get the trip start code.`,
   payNow: (fee: string) => `Pay ${fee} to confirm`,
@@ -363,6 +384,26 @@ const ta: Strings = {
   findingDriver: 'உங்களுக்கான டிரைவரைத் தேடுகிறோம்.',
   cancelBooking: 'முன்பதிவை ரத்து செய்',
   confirmCancel: 'ரத்து செய்ய மீண்டும் தொடுங்கள்',
+  policyTitle: 'முன்பதிவு மற்றும் ரத்து விதிமுறைகள்',
+  policyPoints: (confirm, cancel, applies) => [
+    `உங்கள் முன்பதிவுக்கு டிரைவர் ஒதுக்கப்பட்டதும், உறுதிசெய்ய ${confirm} செலுத்துவீர்கள். பிறகு டிரைவருடன் பேசலாம், பயணத் தொடக்கக் குறியீடும் கிடைக்கும்.`,
+    applies === 'always'
+      ? `முன்பதிவை ரத்து செய்ய ${cancel} கட்டணம்.`
+      : applies === 'never'
+        ? 'முன்பதிவை ரத்து செய்ய கட்டணம் இல்லை.'
+        : `டிரைவரைத் தேடிக்கொண்டிருக்கும்போது ரத்து செய்தால் கட்டணம் இல்லை. டிரைவர் ஒதுக்கப்பட்ட பிறகு ரத்து செய்தால் ${cancel} கட்டணம், ஏனெனில் டிரைவர் அந்த நேரத்தை உங்களுக்காக ஒதுக்கியுள்ளார்.`,
+    `ரத்து செய்தால் ${confirm} உறுதிசெய்தல் கட்டணம் திருப்பித் தரப்படாது.`,
+    'நாங்களே உங்கள் முன்பதிவை ரத்து செய்தால் (உதா: டிரைவர் கிடைக்காதபோது), ரத்துக் கட்டணம் இல்லை.',
+    'நீங்கள் தொடக்கக் குறியீட்டைக் கொடுத்தால் மட்டுமே பயணம் தொடங்கும்; முடிவுக் குறியீட்டைக் கொடுத்தால் முடியும்.',
+  ],
+  policyAgree: 'முன்பதிவு மற்றும் ரத்து விதிமுறைகளைப் படித்து ஏற்கிறேன்',
+  policyUpdated: 'எங்கள் முன்பதிவு மற்றும் ரத்து விதிமுறைகள் மாறியுள்ளன. தொடர, படித்து ஏற்றுக்கொள்ளுங்கள்.',
+  cancelWithFee: (fee) => `முன்பதிவை ரத்து செய் (${fee} கட்டணம்)`,
+  cancelFeeExplain: (fee) => `டிரைவர் ஏற்கனவே ஒதுக்கப்பட்டுள்ளதால், இப்போது ரத்து செய்ய ${fee} கட்டணம். செலுத்தினால் முன்பதிவு ரத்தாகும்.`,
+  payToCancel: (fee) => `${fee} செலுத்தி ரத்து செய்`,
+  keepBooking: 'முன்பதிவை வைத்திரு',
+  cancelledWithFee: (fee) => `முன்பதிவு ரத்து செய்யப்பட்டது. ரத்துக் கட்டணம் ${fee} கிடைத்தது.`,
+  cancelFeePaid: (fee) => `ரத்துக் கட்டணம் ${fee} செலுத்தப்பட்டது`,
   confirmTitle: (driver) => `உங்கள் முன்பதிவுக்கு ${driver || 'டிரைவர்'} தயார்`,
   confirmBody: (fee) => `உறுதிசெய்ய ${fee} செலுத்துங்கள். பிறகு டிரைவருடன் WhatsApp-ல் பேசலாம், பயணத் தொடக்கக் குறியீடும் கிடைக்கும்.`,
   payNow: (fee) => `${fee} செலுத்தி உறுதிசெய்`,

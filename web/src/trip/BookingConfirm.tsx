@@ -57,3 +57,51 @@ export function ChatButton({ url, label }: { url: string; label: string }) {
     </div>
   )
 }
+
+/** Cancel button for a booking that has a cancellation fee: explains it, then pays and cancels. */
+export function CancelWithFee({ b }: { b: Booking }) {
+  const { t } = useT()
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const fee = rupees(b.cancellation_fee_paise ?? 0)
+
+  async function payAndCancel() {
+    setBusy(true)
+    setError(null)
+    try {
+      const p = await paymentApi<Payment>(`/payments/booking/${b.id}/cancel`, { body: { return_to: 'web' } })
+      if (!p.pay_url) throw new Error(t.paymentFailed)
+      window.location.assign(p.pay_url) // after paying, the booking is cancelled and the customer comes back here
+    } catch (err) {
+      setError((err as Error).message)
+      setBusy(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <button className="btn" onClick={() => setOpen(true)}>
+        {t.cancelWithFee(fee)}
+      </button>
+    )
+  }
+  return (
+    <div className="cancel-box" role="group" aria-label={t.cancelBooking}>
+      <p>{t.cancelFeeExplain(fee)}</p>
+      <div className="row-between">
+        <button className="btn" onClick={() => setOpen(false)} disabled={busy}>
+          {t.keepBooking}
+        </button>
+        <button className="btn danger" onClick={() => void payAndCancel()} disabled={busy}>
+          {busy ? t.openingPayment : t.payToCancel(fee)}
+        </button>
+      </div>
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}

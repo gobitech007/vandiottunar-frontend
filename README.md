@@ -115,6 +115,10 @@ cd mobile && npx tsc --noEmit && npx expo export --platform android
 
 When a driver is assigned, the customer sees only the driver's name and a **Pay ₹1 to confirm** button. It opens the payment page (Razorpay, or the test checkout in development) and comes back to *My bookings*. Then the booking shows the **start code** and **Chat with driver on WhatsApp**: an encrypted link that opens your WhatsApp Business number with the booking and a chat PIN; messages are passed between customer and driver, and phone numbers stay private. Until the customer pays, the driver sees *Waiting for the customer to confirm* and can't start the trip.
 
+## Cancellation fee and booking policy
+
+Customers must tick **I have read and agree to the booking & cancellation policy** when they register (website and app). The policy explains the ₹1 confirmation and the **₹49 cancellation fee**: cancelling is free while we're still finding a driver; once a driver is assigned, *Cancel booking (₹49 fee)* opens the payment page and the booking is cancelled when the fee is paid. The amounts come from the order-service (`GET /bookings/policy`). To change the wording, edit `policyPoints` in `web/src/i18n.tsx` and `mobile/src/i18n.ts`, and bump `CUSTOMER_POLICY_VERSION` in the user-service so customers accept the new text.
+
 ## Android app: drivers and customers
 
 At login the app asks *I am a: Driver / Car owner / Business*. Drivers get the registration steps and their trips; customers get *My bookings* (book a driver, pay ₹1 in an in-app browser that returns to the app via `vandiottunar://payment`, WhatsApp chat, trip codes, live map). Add `EXPO_PUBLIC_PAYMENT_API_URL` to `mobile/.env`.

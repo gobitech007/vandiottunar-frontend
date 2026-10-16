@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { api, CAR_RE, cleanCarNumber, type CustomerProfile } from '../api'
 import { errorText, useT } from '../i18n'
 import { Button, Chips, ErrorText, Field, Screen } from '../ui'
+import PolicyBox from './PolicyBox'
 
 export default function CustomerProfileScreen({
   profile,
@@ -23,11 +24,12 @@ export default function CustomerProfileScreen({
   const [pincode, setPincode] = useState(profile.home_pincode ?? '')
   const [area, setArea] = useState(profile.home_area ?? '')
   const [needs, setNeeds] = useState<string[]>(profile.needs.length ? profile.needs : [business ? 'job' : 'on_demand'])
+  const [agreed, setAgreed] = useState(profile.policy_accepted)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const carOk = car.trim() ? CAR_RE.test(cleanCarNumber(car)) : business
-  const ok = name.trim().length >= 2 && /^[1-9]\d{5}$/.test(pincode) && needs.length > 0 && carOk && (!business || company.trim())
+  const ok = name.trim().length >= 2 && /^[1-9]\d{5}$/.test(pincode) && needs.length > 0 && carOk && (!business || company.trim()) && agreed
 
   async function save() {
     setBusy(true)
@@ -42,6 +44,7 @@ export default function CustomerProfileScreen({
       }
       if (business) body.company_name = company.trim()
       if (car.trim()) body.car_number = cleanCarNumber(car)
+      if (!profile.policy_accepted) body.accept_policy_version = profile.current_policy_version
       await api.put('/customers/me', body)
       onDone()
     } catch (err) {
@@ -79,6 +82,7 @@ export default function CustomerProfileScreen({
         onToggle={(v) => setNeeds((prev) => (prev.includes(v) ? prev.filter((x) => x !== v) : [...prev, v]))}
         render={(v) => t.needLabels[v]}
       />
+      <PolicyBox accepted={agreed} onChange={setAgreed} updated={!profile.policy_accepted && Boolean(profile.policy_accepted_at)} />
       <ErrorText>{error}</ErrorText>
       <Button label={t.save} onPress={save} busy={busy} disabled={!ok} />
     </Screen>

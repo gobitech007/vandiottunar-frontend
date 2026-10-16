@@ -314,3 +314,12 @@ textarea { resize: vertical; }
 .chat-log li.driver { justify-self: end; background: #fff6d6; }
 .chat-log .meta { display: block; font-size: 0.78rem; color: var(--muted); }
 .card.highlight { outline: 3px solid var(--mustard); outline-offset: 2px; }
+
+/* Booking & cancellation policy */
+.policy-box { border: 1.5px solid var(--line); border-radius: var(--radius); background: #fbf8f0; padding: 0.9rem 1rem; margin: 1rem 0 0.5rem; }
+.policy-box h3 { margin: 0 0 0.4rem; font-size: 1.02rem; color: var(--green); }
+.policy-box ol { margin: 0 0 0.75rem; padding-left: 1.25rem; display: grid; gap: 0.35rem; font-size: 0.95rem; }
+.policy-box .check { margin: 0; font-weight: 700; display: flex; gap: 0.6rem; align-items: flex-start; }
+.policy-box .check input { width: 22px; height: 22px; flex: none; margin-top: 2px; accent-color: var(--green); }
+.cancel-box { border: 1.5px solid var(--danger); border-radius: var(--radius); background: #fdf1ec; padding: 0.8rem 1rem; margin-top: 0.5rem; display: grid; gap: 0.6rem; }
+.cancel-box p { margin: 0; }

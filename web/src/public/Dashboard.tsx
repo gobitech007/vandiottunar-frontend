@@ -20,7 +20,7 @@ import { cleanCarNumber, validCarNumber } from './CustomerRegister'
 import PublicShell from './PublicShell'
 import CustomerTrip from '../trip/CustomerTrip'
 import DriverTrip from '../trip/DriverTrip'
-import { ChatButton, PayToConfirm } from '../trip/BookingConfirm'
+import { CancelWithFee, ChatButton, PayToConfirm, rupees } from '../trip/BookingConfirm'
 
 /** Where drivers and customers land after registering or logging in. */
 export default function Dashboard() {
@@ -295,6 +295,8 @@ function CustomerDashboard() {
 
   if (!profile) return error ? <p className="error">{error}</p> : <p className="muted">…</p>
   if (!profile.profile_complete) return <Navigate to="/register/customer" replace />
+  const cancelledNow = paid.outcome === 'cancelled' ? (bookings ?? []).find((x) => x.id === paid.booking) : undefined
+  const shownNotice = cancelledNow ? t.cancelledWithFee(rupees(cancelledNow.cancel_fee_paise ?? 0)) : notice
 
   return (
     <>
@@ -309,9 +311,9 @@ function CustomerDashboard() {
         </p>
       </header>
 
-      {notice && (
+      {shownNotice && (
         <p className="notice ok" role="status">
-          ✓ {notice}
+          ✓ {shownNotice}
         </p>
       )}
       {(error || payError) && (
@@ -369,11 +371,17 @@ function CustomerDashboard() {
             )}
             <CustomerTrip b={b} />
             {b.status === 'pending' && <p className="muted">{t.findingDriver}</p>}
-            {(b.status === 'pending' || b.status === 'assigned') && (
-              <button className={`btn ${confirming === b.id ? 'danger' : ''}`} onClick={() => void cancel(b.id)}>
-                {confirming === b.id ? t.confirmCancel : t.cancelBooking}
-              </button>
+            {b.status === 'cancelled' && b.cancel_fee_status === 'paid' && (
+              <p className="muted">{t.cancelFeePaid(rupees(b.cancel_fee_paise ?? 0))}</p>
             )}
+            {(b.status === 'pending' || b.status === 'assigned') &&
+              ((b.cancellation_fee_paise ?? 0) > 0 ? (
+                <CancelWithFee b={b} />
+              ) : (
+                <button className={`btn ${confirming === b.id ? 'danger' : ''}`} onClick={() => void cancel(b.id)}>
+                  {confirming === b.id ? t.confirmCancel : t.cancelBooking}
+                </button>
+              ))}
           </li>
         ))}
       </ul>

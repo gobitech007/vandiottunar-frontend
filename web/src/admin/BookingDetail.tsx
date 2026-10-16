@@ -142,6 +142,21 @@ export default function BookingDetail() {
             </dd>
             <dt>Notes</dt>
             <dd>{booking.notes ?? '—'}</dd>
+            {booking.status === 'cancelled' && (
+              <>
+                <dt>Cancelled</dt>
+                <dd>
+                  by {booking.cancelled_by ?? '—'}
+                  {booking.cancel_reason && <span className="muted"> · {booking.cancel_reason}</span>}
+                  {booking.cancel_fee_status === 'paid' && (
+                    <div>
+                      <span className="pill ok">₹{(booking.cancel_fee_paise ?? 0) / 100} cancellation fee paid</span>
+                      {booking.cancel_payment_id && <span className="muted"> · {booking.cancel_payment_id}</span>}
+                    </div>
+                  )}
+                </dd>
+              </>
+            )}
             <dt>Confirmation</dt>
             <dd>
               {booking.payment_status === 'paid' ? (

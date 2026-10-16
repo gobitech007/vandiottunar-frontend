@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { BackHandler, Linking, RefreshControl, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { api, ApiError, orderApi, type Booking, type CustomerProfile } from '../api'
+import { api, ApiError, orderApi, rupees, type Booking, type CustomerProfile } from '../api'
 import { errorText, useT } from '../i18n'
 import { Button, Card, colors, ErrorText, styles } from '../ui'
 import BookingCard from './BookingCard'
@@ -18,29 +18,38 @@ export default function CustomerApp({ role, onLogout }: { role: string; onLogout
   const [error, setError] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<Booking[] | null> => {
     setError(null)
     try {
       const p = await api.get<CustomerProfile>('/customers/me')
       setProfile(p)
-      if (p.profile_complete) setBookings(await orderApi.get<Booking[]>('/bookings'))
+      if (!p.profile_complete) return null
+      const list = await orderApi.get<Booking[]>('/bookings')
+      setBookings(list)
+      return list
     } catch (err) {
       if (err instanceof ApiError && (err.status === 401 || err.status === 403)) onLogout()
       else setError(errorText(err, t))
+      return null
     }
   }, [onLogout, t])
 
+  // Load on start and whenever the customer comes back to the bookings list
   useEffect(() => {
-    void load()
-  }, [load])
+    if (screen === 'home') void load()
+  }, [load, screen])
 
   // Coming back from the payment page through the deep link (e.g. the app was closed meanwhile)
   useEffect(() => {
     const handle = (url: string | null) => {
       if (!url || !url.startsWith('vandiottunar://payment')) return
-      const ok = /[?&]payment=paid\b/.test(url)
-      setNotice({ text: ok ? t.paymentDone : t.paymentFailed, ok })
-      void load()
+      const cancelled = /[?&]payment=cancelled\b/.test(url)
+      const ok = cancelled || /[?&]payment=paid\b/.test(url)
+      const id = /[?&]booking=([^&]+)/.exec(url)?.[1]
+      void load().then((list) => {
+        const fee = list?.find((x) => x.id === id)?.cancel_fee_paise ?? 0
+        setNotice({ text: cancelled ? t.cancelledWithFee(rupees(fee)) : ok ? t.paymentDone : t.paymentFailed, ok })
+      })
     }
     void Linking.getInitialURL().then(handle)
     const sub = Linking.addEventListener('url', (e) => handle(e.url))
@@ -140,7 +149,7 @@ export default function CustomerApp({ role, onLogout }: { role: string; onLogout
           </Card>
         )}
         {(bookings ?? []).map((b) => (
-          <BookingCard key={b.id} b={b} onChanged={load} onNotice={(text, ok) => setNotice({ text, ok })} />
+          <BookingCard key={b.id} b={b} onChanged={async () => void (await load())} onNotice={(text, ok) => setNotice({ text, ok })} />
         ))}
         <Button label={t.editDetails} variant="secondary" onPress={() => setScreen('profile')} />
         <Button label={t.logout} variant="ghost" onPress={onLogout} />

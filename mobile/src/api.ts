@@ -208,7 +208,16 @@ export interface CustomerProfile {
   home_area: string | null
   needs: string[]
   car_number: string | null
+  current_policy_version: string
+  policy_accepted: boolean
+  policy_accepted_at: string | null
   profile_complete: boolean
+}
+
+export interface BookingPolicy {
+  confirmation_fee_paise: number
+  cancellation_fee_paise: number
+  cancellation_fee_applies: 'assigned' | 'always' | 'never'
 }
 
 export interface Booking {
@@ -235,6 +244,9 @@ export interface Booking {
   started_at: string | null
   completed_at: string | null
   distance_m: number
+  cancellation_fee_paise: number // what cancelling now costs (0 = free)
+  cancel_fee_status: 'none' | 'paid'
+  cancel_fee_paise: number // paid when cancelled with a fee
 }
 
 export interface Track {
