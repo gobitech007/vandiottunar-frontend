@@ -2,15 +2,19 @@ import { useEffect, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
 import { api } from '../api'
 import { errorText, useT } from '../i18n'
-import { Button, colors, ErrorText, Field, Screen, styles } from '../ui'
+import { Button, Chips, colors, ErrorText, Field, Screen, styles } from '../ui'
 
 interface OtpOut {
   resend_after_seconds: number
   dev_code: string | null
 }
 
-export default function LoginScreen({ onLoggedIn }: { onLoggedIn: (token: string) => void }) {
+const ROLES = ['driver', 'customer', 'employer'] as const
+
+export default function LoginScreen({ onLoggedIn }: { onLoggedIn: (token: string, role: string) => void }) {
   const { t, lang, setLang } = useT()
+  const [role, setRole] = useState<(typeof ROLES)[number]>('driver')
+  const [note, setNote] = useState<string | null>(null)
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
   const [step, setStep] = useState<'phone' | 'code'>('phone')
@@ -47,9 +51,13 @@ export default function LoginScreen({ onLoggedIn }: { onLoggedIn: (token: string
       const res = await api.post<{ access_token: string; role: string }>('/auth/otp/verify', {
         phone,
         code,
-        role: 'driver',
+        role, // used for new numbers; an existing number keeps the role it registered with
       })
-      onLoggedIn(res.access_token)
+      if (res.role !== role) {
+        setNote(t.roleNote(t.roleLabels[res.role] ?? res.role))
+        await new Promise((r) => setTimeout(r, 1500))
+      }
+      onLoggedIn(res.access_token, res.role)
     } catch (err) {
       setError(errorText(err, t))
     } finally {
@@ -88,6 +96,13 @@ export default function LoginScreen({ onLoggedIn }: { onLoggedIn: (token: string
 
       {step === 'phone' ? (
         <>
+          <Chips
+            label={t.iAm}
+            options={ROLES}
+            selected={[role]}
+            onToggle={(v) => setRole(v as (typeof ROLES)[number])}
+            render={(v) => t.roleLabels[v]}
+          />
           <Field
             label={t.phoneLabel}
             value={phone}
@@ -113,6 +128,7 @@ export default function LoginScreen({ onLoggedIn }: { onLoggedIn: (token: string
             autoFocus
           />
           {devCode && <Text style={styles.muted}>{`${t.devCode}: ${devCode}`}</Text>}
+          {note && <Text style={{ color: colors.green, fontWeight: '700' }}>{note}</Text>}
           <ErrorText>{error}</ErrorText>
           <Button label={t.verify} onPress={verify} busy={busy} disabled={code.length < 6} />
           <Button

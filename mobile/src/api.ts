@@ -3,6 +3,8 @@
 export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://10.0.2.2:8000'
 // Bookings and assignments (order-service)
 export const ORDER_API_URL = process.env.EXPO_PUBLIC_ORDER_API_URL ?? 'http://10.0.2.2:8001'
+// ₹1 booking confirmation payments
+export const PAYMENT_API_URL = process.env.EXPO_PUBLIC_PAYMENT_API_URL ?? 'http://10.0.2.2:8002'
 
 let authToken: string | null = null
 export const setAuthToken = (token: string | null) => {
@@ -127,6 +129,22 @@ export const LICENCE_GROUPS = {
 export type LicenceGroup = keyof typeof LICENCE_GROUPS
 export const DEFAULT_CODE: Record<LicenceGroup, string> = { two_wheeler: 'MCWG', four_wheeler: 'LMV', heavy: 'HGMV' }
 
+const jsonPost = (base: string) => <T>(path: string, body?: unknown) =>
+  send<T>(
+    path,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    },
+    base,
+  )
+
+export const paymentApi = {
+  get: <T>(path: string) => send<T>(path, { method: 'GET' }, PAYMENT_API_URL),
+  post: jsonPost(PAYMENT_API_URL),
+}
+
 export const orderApi = {
   get: <T>(path: string) => send<T>(path, { method: 'GET' }, ORDER_API_URL),
   post: <T>(path: string, body?: unknown) =>
@@ -158,6 +176,8 @@ export interface Assignment {
   status: 'assigned' | 'in_progress' | 'completed'
   started_at: string | null
   distance_m: number
+  payment_status: 'unpaid' | 'paid' | 'waived'
+  chat_url: string | null
   customer_name: string | null
   customer_phone: string
   company_name: string | null
@@ -173,3 +193,67 @@ export function formatWhen(iso: string): string {
     timeZone: 'Asia/Kolkata',
   })
 }
+
+
+// ---- Customer side ----
+
+export type CustomerRole = 'customer' | 'employer'
+
+export interface CustomerProfile {
+  id: string
+  full_name: string | null
+  email: string | null
+  company_name: string | null
+  home_pincode: string | null
+  home_area: string | null
+  needs: string[]
+  car_number: string | null
+  profile_complete: boolean
+}
+
+export interface Booking {
+  id: string
+  reference: string
+  booking_type: 'on_demand' | 'job'
+  vehicle_class: 'two_wheeler' | 'four_wheeler' | 'heavy'
+  car_number: string | null
+  start_at: string
+  end_at: string | null
+  pickup_address: string | null
+  pickup_area: string | null
+  pickup_pincode: string
+  pickup_lat: number | null
+  pickup_lng: number | null
+  notes: string | null
+  status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
+  driver_name: string | null
+  payment_status: 'unpaid' | 'paid' | 'waived'
+  fee_paise: number
+  chat_url: string | null
+  start_code: string | null
+  end_code: string | null
+  started_at: string | null
+  completed_at: string | null
+  distance_m: number
+}
+
+export interface Track {
+  status: string
+  started_at: string | null
+  distance_km: number
+  last: { lat: number; lng: number; recorded_at: string; accuracy_m: number | null } | null
+  path: [number, number][]
+  pickup_lat: number | null
+  pickup_lng: number | null
+  driver_name: string | null
+}
+
+export interface Payment {
+  id: string
+  status: 'created' | 'paid' | 'failed' | 'expired'
+  pay_url: string | null
+}
+
+export const CAR_RE = /^([A-Z]{2}\d{1,2}[A-Z]{0,3}\d{1,4}|\d{2}BH\d{4}[A-Z]{1,2})$/
+export const cleanCarNumber = (v: string) => v.toUpperCase().replace(/[\s.-]/g, '')
+export const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN')}`

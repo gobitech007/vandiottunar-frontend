@@ -9,6 +9,16 @@ Two apps that talk to [`vandiottunar-user-service`](https://github.com/gobitech0
 
 Both apps use the Vandi Ottunar look (green `#0E3B2E`, mustard `#F2B705`, cream `#F7F1E3`). The driver app is **Tamil first** with an English toggle.
 
+## Services
+
+| Service | Port | Repo |
+|---|---|---|
+| user-service (accounts, drivers) | 8000 | `vandiottunar-user-service` |
+| order-service (bookings, trips, WhatsApp chat) | 8001 | `vandiottunar-order-service` |
+| payment-service (₹1 confirmation, Razorpay) | 8002 | `vandiottunar-payment-service` |
+
+`CLAUDE.md` in each repo explains how everything fits together.
+
 ## Start the API first
 
 ```bash
@@ -101,9 +111,17 @@ cd web && npm run build && npm run lint
 cd mobile && npx tsc --noEmit && npx expo export --platform android
 ```
 
+## ₹1 confirmation and WhatsApp chat
+
+When a driver is assigned, the customer sees only the driver's name and a **Pay ₹1 to confirm** button. It opens the payment page (Razorpay, or the test checkout in development) and comes back to *My bookings*. Then the booking shows the **start code** and **Chat with driver on WhatsApp**: an encrypted link that opens your WhatsApp Business number with the booking and a chat PIN; messages are passed between customer and driver, and phone numbers stay private. Until the customer pays, the driver sees *Waiting for the customer to confirm* and can't start the trip.
+
+## Android app: drivers and customers
+
+At login the app asks *I am a: Driver / Car owner / Business*. Drivers get the registration steps and their trips; customers get *My bookings* (book a driver, pay ₹1 in an in-app browser that returns to the app via `vandiottunar://payment`, WhatsApp chat, trip codes, live map). Add `EXPO_PUBLIC_PAYMENT_API_URL` to `mobile/.env`.
+
 ## VS Code: start everything automatically
 
-Keep the three repos side by side in one folder (`vandiottunar-frontend`, `vandiottunar-user-service`, `vandiottunar-order-service`), then open **`vandiottunar-frontend/vandiottunar.code-workspace`** (File → Open Workspace from File).
+Keep the repos side by side in one folder (`vandiottunar-frontend`, `vandiottunar-user-service`, `vandiottunar-order-service`, `vandiottunar-payment-service`), then open **`vandiottunar-frontend/vandiottunar.code-workspace`** (File → Open Workspace from File).
 
 When the workspace opens, VS Code runs:
 
@@ -111,6 +129,7 @@ When the workspace opens, VS Code runs:
 |---|---|
 | User service | `alembic upgrade head`, then uvicorn on **8000** (auto-reload) |
 | Order service | `alembic upgrade head`, then uvicorn on **8001** (auto-reload) |
+| Payment service | `alembic upgrade head`, then uvicorn on **8002** (auto-reload) |
 | Website | `npm run dev` in `web/` on **5173** |
 
 The first time, VS Code asks whether to allow automatic tasks: choose **Allow** (or Command Palette → *Tasks: Manage Automatic Tasks* → *Allow*). Each service needs its own `.venv` and `.env`, and `web/` needs `npm install`, done once.

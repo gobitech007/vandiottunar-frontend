@@ -170,6 +170,19 @@ const en = {
   secondsAgo: (n: number) => (n < 60 ? `${n} s ago` : `${Math.round(n / 60)} min ago`),
   driverHere: 'Driver',
   pickupHere: 'Pickup',
+  // ₹1 booking confirmation and WhatsApp chat
+  confirmTitle: (driver: string) => `${driver || 'A driver'} is ready for your booking`,
+  confirmBody: (fee: string) =>
+    `Pay ${fee} to confirm. Then you can chat with your driver on WhatsApp and you'll get the trip start code.`,
+  payNow: (fee: string) => `Pay ${fee} to confirm`,
+  openingPayment: 'Opening the payment page…',
+  paymentDone: 'Payment received. Your booking is confirmed: chat with your driver below.',
+  paymentFailed: "The payment didn't go through. No money was taken for a failed payment. Please try again.",
+  confirmedPill: 'Confirmed',
+  chatDriver: 'Chat with driver on WhatsApp',
+  chatCustomer: 'Message customer on WhatsApp',
+  chatPrivacy: 'Opens WhatsApp with our business number. Your phone number stays private.',
+  waitingConfirm: 'Waiting for the customer to confirm the booking (₹1). You can start the trip once they do.',
   openMap: 'Map',
 
   // Bookings
@@ -467,6 +480,17 @@ const ta: Strings = {
   secondsAgo: (n) => (n < 60 ? `${n} வினாடி முன்` : `${Math.round(n / 60)} நிமிடம் முன்`),
   driverHere: 'டிரைவர்',
   pickupHere: 'ஏறும் இடம்',
+  confirmTitle: (driver) => `உங்கள் முன்பதிவுக்கு ${driver || 'டிரைவர்'} தயார்`,
+  confirmBody: (fee) => `உறுதிசெய்ய ${fee} செலுத்துங்கள். பிறகு டிரைவருடன் WhatsApp-ல் பேசலாம், பயணத் தொடக்கக் குறியீடும் கிடைக்கும்.`,
+  payNow: (fee) => `${fee} செலுத்தி உறுதிசெய்`,
+  openingPayment: 'பணம் செலுத்தும் பக்கம் திறக்கிறது…',
+  paymentDone: 'பணம் கிடைத்தது. உங்கள் முன்பதிவு உறுதியானது: கீழே டிரைவருடன் பேசுங்கள்.',
+  paymentFailed: 'பணம் செலுத்துதல் வெற்றிபெறவில்லை. தோல்வியான பரிவர்த்தனைக்குப் பணம் எடுக்கப்படாது. மீண்டும் முயலுங்கள்.',
+  confirmedPill: 'உறுதியானது',
+  chatDriver: 'டிரைவருடன் WhatsApp-ல் பேசு',
+  chatCustomer: 'வாடிக்கையாளருக்கு WhatsApp-ல் செய்தி அனுப்பு',
+  chatPrivacy: 'எங்கள் வணிக எண்ணுடன் WhatsApp திறக்கும். உங்கள் தொலைபேசி எண் வெளியிடப்படாது.',
+  waitingConfirm: 'வாடிக்கையாளர் முன்பதிவை உறுதிசெய்யக் காத்திருக்கிறது (₹1). உறுதிசெய்ததும் பயணத்தைத் தொடங்கலாம்.',
   openMap: 'வரைபடம்',
 
   bookDriver: 'டிரைவரை புக் செய்',

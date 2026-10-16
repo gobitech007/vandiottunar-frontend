@@ -11,6 +11,10 @@
     {
       "name": "vandiottunar-order-service",
       "path": "../vandiottunar-order-service"
+    },
+    {
+      "name": "vandiottunar-payment-service",
+      "path": "../vandiottunar-payment-service"
     }
   ],
   "settings": {
@@ -21,7 +25,7 @@
     "configurations": [],
     "compounds": [
       {
-        "name": "Debug all: user + order service + website",
+        "name": "Debug all: user + order + payment service + website",
         "configurations": [
           {
             "name": "User service: debug (port 8000)",
@@ -30,6 +34,10 @@
           {
             "name": "Order service: debug (port 8001)",
             "folder": "vandiottunar-order-service"
+          },
+          {
+            "name": "Payment service: debug (port 8002)",
+            "folder": "vandiottunar-payment-service"
           },
           {
             "name": "Website: open in Chrome (debug)",

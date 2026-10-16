@@ -1,6 +1,8 @@
 export const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:8000'
 // Bookings and driver assignment live in the order-service
 export const ORDER_API_URL = (import.meta.env.VITE_ORDER_API_URL as string | undefined) ?? 'http://localhost:8001'
+// ₹1 booking confirmation payments
+export const PAYMENT_API_URL = (import.meta.env.VITE_PAYMENT_API_URL as string | undefined) ?? 'http://localhost:8002'
 
 // Admin and public (driver/customer) sign-ins are kept separate, so testing one never logs out the other
 const ADMIN_KEY = 'vo_admin_token'
@@ -122,6 +124,24 @@ export const orderApi = <T>(path: string, options: Omit<RequestOptions, 'scope' 
   request<T>(path, { ...options, scope: 'user', base: ORDER_API_URL })
 export const adminOrderApi = <T>(path: string, options: Omit<RequestOptions, 'scope' | 'base'> = {}) =>
   request<T>(path, { ...options, scope: 'admin', base: ORDER_API_URL })
+/** Payment-service calls */
+export const paymentApi = <T>(path: string, options: Omit<RequestOptions, 'scope' | 'base'> = {}) =>
+  request<T>(path, { ...options, scope: 'user', base: PAYMENT_API_URL })
+
+export interface Payment {
+  id: string
+  booking_id: string
+  amount_paise: number
+  status: 'created' | 'paid' | 'failed' | 'expired'
+  pay_url: string | null
+}
+
+export interface ChatMessage {
+  sender: 'customer' | 'driver' | 'system'
+  body: string
+  delivery: string
+  created_at: string
+}
 
 export type DriverStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'suspended'
 
@@ -328,8 +348,13 @@ export interface Booking {
   notes: string | null
   status: BookingStatus
   driver_name: string | null
-  driver_phone: string | null
   assigned_at: string | null
+  // Booking confirmation (₹1). Until it's paid the customer sees no chat link and no start code
+  payment_status: 'unpaid' | 'paid' | 'waived'
+  paid_at: string | null
+  /** Encrypted WhatsApp relay link (customer: to the driver; driver: to the customer) */
+  chat_url?: string | null
+  fee_paise?: number
   started_at: string | null
   completed_at: string | null
   distance_m: number
@@ -371,6 +396,8 @@ export interface AdminBooking extends DriverBooking {
   customer_user_id: string
   customer_role: string
   driver_user_id: string | null
+  driver_phone: string | null
+  payment_id: string | null
   assignment_mode: string | null
   cancelled_by: string | null
 }

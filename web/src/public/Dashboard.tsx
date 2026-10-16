@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { Link, Navigate, useLocation } from 'react-router-dom'
+import { Link, Navigate, useLocation, useSearchParams } from 'react-router-dom'
 import {
   ApiError,
   formatWhen,
@@ -20,6 +20,7 @@ import { cleanCarNumber, validCarNumber } from './CustomerRegister'
 import PublicShell from './PublicShell'
 import CustomerTrip from '../trip/CustomerTrip'
 import DriverTrip from '../trip/DriverTrip'
+import { ChatButton, PayToConfirm } from '../trip/BookingConfirm'
 
 /** Where drivers and customers land after registering or logging in. */
 export default function Dashboard() {
@@ -198,7 +199,12 @@ function DriverDashboard() {
             </p>
             <Pickup b={j} />
             {j.notes && <p className="note">“{j.notes}”</p>}
-            <DriverTrip job={j} onChange={load} />
+            {j.chat_url && <ChatButton url={j.chat_url} label={t.chatCustomer} />}
+            {j.status === 'assigned' && j.payment_status === 'unpaid' ? (
+              <p className="notice">{t.waitingConfirm}</p>
+            ) : (
+              <DriverTrip job={j} onChange={load} />
+            )}
           </li>
         ))}
       </ul>
@@ -234,10 +240,22 @@ function CustomerDashboard() {
   const [bookings, setBookings] = useState<Booking[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [booking, setBooking] = useState(false)
+  // Back from the payment page: /dashboard?booking=<id>&payment=paid|failed
+  const [params, setParams] = useSearchParams()
+  const [paid] = useState(() => ({ booking: params.get('booking'), outcome: params.get('payment') }))
   const [notice, setNotice] = useState<string | null>(
-    (location.state as { booked?: boolean } | null)?.booked ? t.bookingCreated : null,
+    paid.outcome === 'paid'
+      ? t.paymentDone
+      : (location.state as { booked?: boolean } | null)?.booked
+        ? t.bookingCreated
+        : null,
   )
+  const [payError] = useState<string | null>(paid.outcome === 'failed' ? t.paymentFailed : null)
   const [confirming, setConfirming] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (params.has('payment')) setParams({}, { replace: true }) // don't show it again on reload
+  }, [params, setParams])
 
   const load = useCallback(async () => {
     setError(null)
@@ -296,9 +314,9 @@ function CustomerDashboard() {
           ✓ {notice}
         </p>
       )}
-      {error && (
+      {(error || payError) && (
         <p className="error" role="alert">
-          {error}
+          {error ?? payError}
         </p>
       )}
 
@@ -321,9 +339,15 @@ function CustomerDashboard() {
       {bookings && bookings.length === 0 && <p className="card muted">{t.noBookings}</p>}
       <ul className="booking-list">
         {(bookings ?? []).map((b) => (
-          <li key={b.id} className={`card booking ${b.status === 'cancelled' ? 'muted-card' : ''}`}>
+          <li
+            key={b.id}
+            id={`booking-${b.id}`}
+            className={`card booking ${b.status === 'cancelled' ? 'muted-card' : ''} ${b.id === paid.booking ? 'highlight' : ''}`}
+          >
             <div className="booking-top">
-              <span className={`pill status-${b.status}`}>{t.statusLabels[b.status]}</span>
+              <span className={`pill status-${b.status === 'assigned' && b.payment_status !== 'unpaid' ? 'confirmed' : b.status}`}>
+                {b.status === 'assigned' && b.payment_status !== 'unpaid' ? t.confirmedPill : t.statusLabels[b.status]}
+              </span>
               <span className="muted">{t.bookingRef(b.reference)}</span>
             </div>
             <When b={b} />
@@ -333,17 +357,15 @@ function CustomerDashboard() {
             </p>
             <Pickup b={b} />
             {(b.status === 'assigned' || b.status === 'in_progress') && b.driver_name && (
-              <div className="person">
-                <div>
-                  <span className="muted">{t.yourDriver}</span>
-                  <strong>{b.driver_name}</strong>
+              <>
+                <div className="person">
+                  <div>
+                    <span className="muted">{t.yourDriver}</span>
+                    <strong>{b.driver_name}</strong>
+                  </div>
                 </div>
-                {b.driver_phone && (
-                  <a className="btn primary" href={`tel:${b.driver_phone}`}>
-                    {t.call} {b.driver_phone}
-                  </a>
-                )}
-              </div>
+                {b.payment_status === 'unpaid' ? <PayToConfirm b={b} /> : b.chat_url && <ChatButton url={b.chat_url} label={t.chatDriver} />}
+              </>
             )}
             <CustomerTrip b={b} />
             {b.status === 'pending' && <p className="muted">{t.findingDriver}</p>}

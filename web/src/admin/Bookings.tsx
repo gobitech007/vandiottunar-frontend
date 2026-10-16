@@ -177,6 +177,9 @@ export default function Bookings() {
                     <>
                       {b.driver_name}
                       <div className="muted">{b.assignment_mode === 'auto' ? 'auto' : 'manual'}</div>
+                      <span className={`pill ${b.payment_status === 'unpaid' ? '' : 'ok'}`}>
+                        {b.payment_status === 'paid' ? '₹1 paid' : b.payment_status === 'waived' ? 'fee waived' : 'not paid'}
+                      </span>
                     </>
                   ) : (
                     <Link className="btn" to={`/admin/bookings/${b.id}`}>

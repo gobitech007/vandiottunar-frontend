@@ -54,7 +54,8 @@
           "configureAndroidBackup": true,
           "faceIDPermission": false
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ]
   }
 }

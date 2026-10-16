@@ -1,6 +1,15 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { adminOrderApi, formatWhen, mapLink, type AdminBooking, type AutoAssignResult, type Candidate, type Track } from '../api'
+import {
+  adminOrderApi,
+  formatWhen,
+  mapLink,
+  type AdminBooking,
+  type AutoAssignResult,
+  type Candidate,
+  type ChatMessage,
+  type Track,
+} from '../api'
 import { EnglishOnly } from '../i18n'
 import LiveTrip from '../trip/LiveTrip'
 import { TYPE, VEHICLE } from './Bookings'
@@ -22,12 +31,14 @@ export default function BookingDetail() {
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [reason, setReason] = useState('')
+  const [chat, setChat] = useState<ChatMessage[] | null>(null)
 
   const load = useCallback(async () => {
     try {
       const b = await adminOrderApi<AdminBooking>(`/admin/bookings/${id}`)
       setBooking(b)
       setCandidates(b.status === 'pending' ? await adminOrderApi<Candidate[]>(`/admin/bookings/${id}/candidates`) : null)
+      setChat(b.driver_name ? await adminOrderApi<ChatMessage[]>(`/admin/bookings/${id}/chat`) : null)
     } catch (err) {
       setError((err as Error).message)
     }
@@ -131,6 +142,36 @@ export default function BookingDetail() {
             </dd>
             <dt>Notes</dt>
             <dd>{booking.notes ?? '—'}</dd>
+            <dt>Confirmation</dt>
+            <dd>
+              {booking.payment_status === 'paid' ? (
+                <span className="pill ok">₹1 paid {formatWhen(booking.paid_at)}</span>
+              ) : booking.payment_status === 'waived' ? (
+                <span className="pill ok">Fee waived by admin</span>
+              ) : (
+                <>
+                  <span className="pill">Not paid</span>
+                  {active && (
+                    <>
+                      {' '}
+                      <button
+                        className="btn link"
+                        disabled={busy}
+                        onClick={() =>
+                          void run(
+                            () => adminOrderApi(`/admin/bookings/${id}/waive-payment`, { method: 'POST' }),
+                            'Booking confirmed without payment.',
+                          )
+                        }
+                      >
+                        Confirm without payment
+                      </button>
+                    </>
+                  )}
+                </>
+              )}
+              {booking.payment_id && <div className="muted">Payment {booking.payment_id}</div>}
+            </dd>
           </dl>
         </section>
         <section className="card">
@@ -215,6 +256,25 @@ export default function BookingDetail() {
             Mark completed
           </button>
           <p className="hint">The driver starts the trip with the start code the customer sees in their bookings.</p>
+        </section>
+      )}
+
+      {chat && chat.length > 0 && (
+        <section className="card">
+          <h2>WhatsApp chat ({chat.length})</h2>
+          <p className="hint">Messages relayed between the customer and the driver through the business number.</p>
+          <ul className="chat-log">
+            {chat.map((m, i) => (
+              <li key={i} className={m.sender}>
+                <span className="meta">
+                  {m.sender === 'customer' ? booking.customer_name ?? 'Customer' : booking.driver_name ?? 'Driver'} ·{' '}
+                  {formatWhen(m.created_at)}
+                  {m.delivery === 'failed' && ' · not delivered'}
+                </span>
+                {m.body}
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 

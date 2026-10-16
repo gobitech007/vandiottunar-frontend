@@ -12,13 +12,15 @@ import LocationScreen from './src/screens/LocationScreen'
 import LoginScreen from './src/screens/LoginScreen'
 import ProfileScreen from './src/screens/ProfileScreen'
 import StatusScreen from './src/screens/StatusScreen'
-import { loadLang, loadToken, saveLang, saveToken } from './src/session'
+import CustomerApp from './src/customer/CustomerApp'
+import { loadLang, loadRole, loadToken, saveLang, saveRole, saveToken } from './src/session'
 import { Button, colors } from './src/ui'
 
 export default function App() {
   const [lang, setLangState] = useState<Lang>('ta')
   const [booting, setBooting] = useState(true)
   const [token, setToken] = useState<string | null>(null)
+  const [role, setRole] = useState<string>('driver')
   const [profile, setProfile] = useState<Profile | null>(null)
   const [checklist, setChecklist] = useState<Checklist | null>(null)
   const [step, setStep] = useState<Step | null>(null)
@@ -40,6 +42,8 @@ export default function App() {
   const logout = useCallback(() => {
     setAuthToken(null)
     void saveToken(null)
+    void saveRole(null)
+    setRole('driver')
     setToken(null)
     setProfile(null)
     setChecklist(null)
@@ -61,8 +65,9 @@ export default function App() {
   // Restore session and language on launch
   useEffect(() => {
     void (async () => {
-      const [savedToken, savedLang] = await Promise.all([loadToken(), loadLang()])
+      const [savedToken, savedLang, savedRole] = await Promise.all([loadToken(), loadLang(), loadRole()])
       setLangState(savedLang)
+      setRole(savedRole ?? 'driver')
       if (savedToken) {
         setAuthToken(savedToken)
         setToken(savedToken)
@@ -72,8 +77,8 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (token) void refresh()
-  }, [token, refresh])
+    if (token && role === 'driver') void refresh()
+  }, [token, role, refresh])
 
   // Android back button closes an open step instead of exiting the app
   useEffect(() => {
@@ -98,13 +103,17 @@ export default function App() {
   } else if (!token) {
     content = (
       <LoginScreen
-        onLoggedIn={(tok) => {
+        onLoggedIn={(tok, r) => {
           setAuthToken(tok)
           void saveToken(tok)
+          void saveRole(r)
+          setRole(r)
           setToken(tok)
         }}
       />
     )
+  } else if (role !== 'driver') {
+    content = <CustomerApp role={role} onLogout={logout} />
   } else if (!profile || !checklist) {
     content = (
       <Centered>

@@ -3,6 +3,7 @@ import { Linking, Text, View } from 'react-native'
 import { formatWhen, orderApi, type Assignment, type Profile } from '../api'
 import { errorText, useT } from '../i18n'
 import { Button, Card, colors, ErrorText, Screen, styles } from '../ui'
+import { WhatsAppButton } from '../customer/BookingCard'
 import TripPanel from './TripPanel'
 
 export default function StatusScreen({
@@ -105,7 +106,12 @@ export default function StatusScreen({
                   </View>
                 )}
               </View>
-              <TripPanel job={j} onChange={loadJobs} />
+              {j.chat_url && <WhatsAppButton url={j.chat_url} label={t.chatCustomer} />}
+              {j.status === 'assigned' && j.payment_status === 'unpaid' ? (
+                <Text style={[styles.body16, { backgroundColor: '#FBEEE0', padding: 12, borderRadius: 10 }]}>{t.waitingConfirm}</Text>
+              ) : (
+                <TripPanel job={j} onChange={loadJobs} />
+              )}
             </Card>
           ))}
           <Button label={t.refresh} variant="secondary" onPress={() => void loadJobs()} />
