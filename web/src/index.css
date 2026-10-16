@@ -323,3 +323,12 @@ textarea { resize: vertical; }
 .policy-box .check input { width: 22px; height: 22px; flex: none; margin-top: 2px; accent-color: var(--green); }
 .cancel-box { border: 1.5px solid var(--danger); border-radius: var(--radius); background: #fdf1ec; padding: 0.8rem 1rem; margin-top: 0.5rem; display: grid; gap: 0.6rem; }
 .cancel-box p { margin: 0; }
+
+/* Driver fare */
+.fare-box { border: 1px solid #d9d2bd; background: #fff; border-radius: var(--radius); padding: 0.75rem 0.9rem; margin: 0.6rem 0; }
+.fare-box p { margin: 0.25rem 0; }
+.fare-lines { display: grid; grid-template-columns: 1fr auto; gap: 0.3rem 1rem; margin: 0.5rem 0 0.25rem; }
+.fare-lines dt, .fare-lines dd { margin: 0; }
+.fare-lines dd { text-align: right; font-variant-numeric: tabular-nums; }
+.fare-lines .total { border-top: 1px solid #e4dcc6; padding-top: 0.35rem; font-weight: 700; color: var(--green); }
+.fare-box .discount { color: #1f7a45; font-weight: 600; }

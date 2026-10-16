@@ -310,6 +310,10 @@ export interface BookingPolicy {
   confirmation_fee_paise: number
   cancellation_fee_paise: number
   cancellation_fee_applies: 'assigned' | 'always' | 'never'
+  hourly_rate_paise: number
+  daily_rate_paise: number
+  daily_hours: number
+  new_customer_discount_pct: number
 }
 
 export interface AdminCustomer extends CustomerProfile {
@@ -341,6 +345,30 @@ export interface ParsedAadhaar {
 export type BookingStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled'
 export type BookingType = 'on_demand' | 'job'
 export type VehicleClass = 'two_wheeler' | 'four_wheeler' | 'heavy'
+
+/** Rates copied onto a trip booking when it was made (null for permanent jobs) */
+export interface FareRates {
+  hourly_rate_paise: number
+  daily_rate_paise: number
+  daily_hours: number
+  /** New-customer discount on this booking (0 = none) */
+  discount_pct: number
+}
+
+/** Driver fare: estimate from the booked times (planned), then the real one from start to end code (actual) */
+export interface Fare {
+  basis: 'planned' | 'actual'
+  hours: number
+  days: number
+  extra_hours: number
+  hourly_rate_paise: number
+  daily_rate_paise: number
+  daily_hours: number
+  subtotal_paise: number
+  discount_pct: number
+  discount_paise: number
+  total_paise: number
+}
 
 export interface Booking {
   id: string
@@ -377,6 +405,9 @@ export interface Booking {
   last_location_at: string | null
   cancel_reason: string | null
   created_at: string
+  rates?: FareRates | null
+  /** null when there's no end time yet (rates only) */
+  fare?: Fare | null
   // Only in the customer's own bookings
   start_code?: string | null
   end_code?: string | null

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { paymentApi, type Booking, type Payment } from '../api'
 import { useT } from '../i18n'
+import { FareBox } from './FareBox'
 
 export const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN')}`
 
@@ -27,6 +28,7 @@ export function PayToConfirm({ b }: { b: Booking }) {
   return (
     <div className="confirm-box">
       <strong>{t.confirmTitle(b.driver_name ?? '')}</strong>
+      <FareBox b={b} />
       <p>{t.confirmBody(fee)}</p>
       <button className="btn primary wide" onClick={() => void pay()} disabled={busy}>
         {busy ? t.openingPayment : t.payNow(fee)}

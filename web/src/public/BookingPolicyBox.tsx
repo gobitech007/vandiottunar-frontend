@@ -5,7 +5,15 @@ import { ORDER_API_URL, type BookingPolicy } from '../api'
 import { useT } from '../i18n'
 import { rupees } from '../trip/BookingConfirm'
 
-const FALLBACK: BookingPolicy = { confirmation_fee_paise: 100, cancellation_fee_paise: 4900, cancellation_fee_applies: 'assigned' }
+const FALLBACK: BookingPolicy = {
+  confirmation_fee_paise: 100,
+  cancellation_fee_paise: 4900,
+  cancellation_fee_applies: 'assigned',
+  hourly_rate_paise: 15000,
+  daily_rate_paise: 100000,
+  daily_hours: 8,
+  new_customer_discount_pct: 10,
+}
 
 export function useBookingPolicy(): BookingPolicy {
   const [policy, setPolicy] = useState<BookingPolicy>(FALLBACK)

@@ -157,6 +157,32 @@ export default function BookingDetail() {
                 </dd>
               </>
             )}
+            {booking.rates && (
+              <>
+                <dt>Driver fare</dt>
+                <dd>
+                  {booking.fare ? (
+                    <>
+                      <strong>₹{(booking.fare.total_paise / 100).toLocaleString('en-IN')}</strong>{' '}
+                      <span className="muted">
+                        {booking.fare.basis === 'actual' ? 'actual' : 'estimate'} · {booking.fare.hours} h
+                        {booking.fare.days > 0 && ` = ${booking.fare.days} day × ₹${booking.fare.daily_rate_paise / 100}`}
+                        {booking.fare.extra_hours > 0 &&
+                          `${booking.fare.days > 0 ? ' +' : ' ='} ${booking.fare.extra_hours} h × ₹${booking.fare.hourly_rate_paise / 100}`}
+                        {booking.fare.discount_paise > 0 &&
+                          ` − ${booking.fare.discount_pct}% new customer (₹${booking.fare.discount_paise / 100})`}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="muted">
+                      No end time: ₹{booking.rates.hourly_rate_paise / 100}/h, ₹{booking.rates.daily_rate_paise / 100} per{' '}
+                      {booking.rates.daily_hours} h day
+                      {booking.rates.discount_pct > 0 && ` · ${booking.rates.discount_pct}% new customer discount`}
+                    </span>
+                  )}
+                </dd>
+              </>
+            )}
             <dt>Confirmation</dt>
             <dd>
               {booking.payment_status === 'paid' ? (

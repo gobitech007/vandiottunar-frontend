@@ -21,6 +21,7 @@ import PublicShell from './PublicShell'
 import CustomerTrip from '../trip/CustomerTrip'
 import DriverTrip from '../trip/DriverTrip'
 import { CancelWithFee, ChatButton, PayToConfirm, rupees } from '../trip/BookingConfirm'
+import { FareBox } from '../trip/FareBox'
 
 /** Where drivers and customers land after registering or logging in. */
 export default function Dashboard() {
@@ -368,6 +369,10 @@ function CustomerDashboard() {
                 </div>
                 {b.payment_status === 'unpaid' ? <PayToConfirm b={b} /> : b.chat_url && <ChatButton url={b.chat_url} label={t.chatDriver} />}
               </>
+            )}
+            {/* Unpaid: the fare is inside the confirm box, before paying */}
+            {(b.status === 'in_progress' || b.status === 'completed' || (b.status === 'assigned' && b.payment_status !== 'unpaid')) && (
+              <FareBox b={b} />
             )}
             <CustomerTrip b={b} />
             {b.status === 'pending' && <p className="muted">{t.findingDriver}</p>}

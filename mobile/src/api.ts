@@ -218,6 +218,33 @@ export interface BookingPolicy {
   confirmation_fee_paise: number
   cancellation_fee_paise: number
   cancellation_fee_applies: 'assigned' | 'always' | 'never'
+  hourly_rate_paise: number
+  daily_rate_paise: number
+  daily_hours: number
+  new_customer_discount_pct: number
+}
+
+/** Rates copied onto a trip booking when it was made (null for permanent jobs) */
+export interface FareRates {
+  hourly_rate_paise: number
+  daily_rate_paise: number
+  daily_hours: number
+  discount_pct: number // new-customer discount on this booking (0 = none)
+}
+
+/** Driver fare: estimate from booked times (planned), then the real one from start to end code (actual) */
+export interface Fare {
+  basis: 'planned' | 'actual'
+  hours: number
+  days: number
+  extra_hours: number
+  hourly_rate_paise: number
+  daily_rate_paise: number
+  daily_hours: number
+  subtotal_paise: number
+  discount_pct: number
+  discount_paise: number
+  total_paise: number
 }
 
 export interface Booking {
@@ -247,6 +274,8 @@ export interface Booking {
   cancellation_fee_paise: number // what cancelling now costs (0 = free)
   cancel_fee_status: 'none' | 'paid'
   cancel_fee_paise: number // paid when cancelled with a fee
+  rates: FareRates | null
+  fare: Fare | null // null when there's no end time yet (rates only)
 }
 
 export interface Track {

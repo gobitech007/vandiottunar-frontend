@@ -5,7 +5,15 @@ import { ORDER_API_URL, rupees, type BookingPolicy } from '../api'
 import { useT } from '../i18n'
 import { colors, styles } from '../ui'
 
-const FALLBACK: BookingPolicy = { confirmation_fee_paise: 100, cancellation_fee_paise: 4900, cancellation_fee_applies: 'assigned' }
+const FALLBACK: BookingPolicy = {
+  confirmation_fee_paise: 100,
+  cancellation_fee_paise: 4900,
+  cancellation_fee_applies: 'assigned',
+  hourly_rate_paise: 15000,
+  daily_rate_paise: 100000,
+  daily_hours: 8,
+  new_customer_discount_pct: 10,
+}
 
 export default function PolicyBox({ accepted, onChange, updated }: { accepted: boolean; onChange: (v: boolean) => void; updated?: boolean }) {
   const { t } = useT()

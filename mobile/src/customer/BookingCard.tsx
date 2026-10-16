@@ -4,6 +4,7 @@ import { Linking, Pressable, Text, View } from 'react-native'
 import { formatWhen, orderApi, paymentApi, rupees, type Booking, type Payment } from '../api'
 import { errorText, useT } from '../i18n'
 import { Button, Card, colors, ErrorText, styles } from '../ui'
+import FareBox from './FareBox'
 import LiveMap from './LiveMap'
 
 const RETURN_URL = 'vandiottunar://payment'
@@ -153,11 +154,14 @@ export default function BookingCard({
       {hasDriver && !confirmed && (
         <View style={{ backgroundColor: '#FFF6D6', borderColor: colors.mustard, borderWidth: 1.5, borderRadius: 12, padding: 12, gap: 8 }}>
           <Text style={{ fontWeight: '800', color: colors.ink }}>{t.confirmTitle(b.driver_name ?? '')}</Text>
+          <FareBox b={b} />
           <Text style={styles.body16}>{t.confirmBody(rupees(b.fee_paise))}</Text>
           <Button label={t.payNow(rupees(b.fee_paise))} onPress={pay} busy={busy} />
         </View>
       )}
       {hasDriver && confirmed && b.chat_url && <WhatsAppButton url={b.chat_url} label={t.chatDriver} />}
+      {/* Unpaid: the fare is inside the confirm box, before paying */}
+      {((hasDriver && confirmed) || b.status === 'completed') && <FareBox b={b} />}
 
       {b.status === 'assigned' && b.start_code && (
         <Code label={t.yourStartCode} digits={b.start_code} tip={t.startCodeTip(b.driver_name ?? '')} />
