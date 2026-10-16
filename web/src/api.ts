@@ -155,6 +155,7 @@ export interface DriverSummary {
   heavy_vehicle: boolean
   phone: string
   status: DriverStatus
+  city?: string | null
   home_pincode: string | null
   home_area: string | null
   experience_years: number | null
@@ -257,6 +258,7 @@ export interface DriverProfile {
   availability: string | null
   work_preferences: string[]
   expected_pay_note: string | null
+  city?: string | null
   home_pincode: string | null
   home_area: string | null
   service_radius_km: number
@@ -293,6 +295,7 @@ export interface CustomerProfile {
   email: string | null
   preferred_language: string
   company_name: string | null
+  city?: string | null
   home_pincode: string | null
   home_area: string | null
   needs: string[]
@@ -502,3 +505,20 @@ export const LICENCE_GROUPS = {
 export type LicenceGroup = keyof typeof LICENCE_GROUPS
 /** The code added when someone ticks a group by hand */
 export const DEFAULT_CODE: Record<LicenceGroup, string> = { two_wheeler: 'MCWG', four_wheeler: 'LMV', heavy: 'HGMV' }
+
+// ---- Cities (user-service GET /cities): where people can register ----
+export interface City {
+  slug: string
+  name_en: string
+  name_ta: string
+}
+
+/** Used until GET /cities answers (and if it can't be reached) */
+export const DEFAULT_CITIES: City[] = [
+  { slug: 'chennai', name_en: 'Chennai', name_ta: 'சென்னை' },
+  { slug: 'coimbatore', name_en: 'Coimbatore', name_ta: 'கோயம்புத்தூர்' },
+  { slug: 'tiruchirappalli', name_en: 'Tiruchirappalli (Trichy)', name_ta: 'திருச்சிராப்பள்ளி (திருச்சி)' },
+]
+
+/** Admin display of a city slug ("tiruchirappalli" → "Tiruchirappalli") */
+export const cityLabel = (slug: string | null | undefined) => (slug ? slug.charAt(0).toUpperCase() + slug.slice(1) : '')

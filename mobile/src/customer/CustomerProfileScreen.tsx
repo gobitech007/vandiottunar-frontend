@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { api, CAR_RE, cleanCarNumber, type CustomerProfile } from '../api'
+import { api, CAR_RE, cleanCarNumber, pincodePlaceholder, type CustomerProfile } from '../api'
+import CityPicker from '../CityPicker'
 import { errorText, useT } from '../i18n'
 import { Button, Chips, ErrorText, Field, Screen } from '../ui'
 import PolicyBox from './PolicyBox'
@@ -21,6 +22,7 @@ export default function CustomerProfileScreen({
   const [company, setCompany] = useState(profile.company_name ?? '')
   const [car, setCar] = useState(profile.car_number ?? '')
   const [email, setEmail] = useState(profile.email ?? '')
+  const [city, setCity] = useState(profile.city ?? '')
   const [pincode, setPincode] = useState(profile.home_pincode ?? '')
   const [area, setArea] = useState(profile.home_area ?? '')
   const [needs, setNeeds] = useState<string[]>(profile.needs.length ? profile.needs : [business ? 'job' : 'on_demand'])
@@ -29,7 +31,7 @@ export default function CustomerProfileScreen({
   const [error, setError] = useState<string | null>(null)
 
   const carOk = car.trim() ? CAR_RE.test(cleanCarNumber(car)) : business
-  const ok = name.trim().length >= 2 && /^[1-9]\d{5}$/.test(pincode) && needs.length > 0 && carOk && (!business || company.trim()) && agreed
+  const ok = name.trim().length >= 2 && Boolean(city) && /^[1-9]\d{5}$/.test(pincode) && needs.length > 0 && carOk && (!business || company.trim()) && agreed
 
   async function save() {
     setBusy(true)
@@ -37,6 +39,7 @@ export default function CustomerProfileScreen({
     try {
       const body: Record<string, unknown> = {
         full_name: name.trim(),
+        city,
         home_pincode: pincode,
         home_area: area.trim() || null,
         needs,
@@ -67,12 +70,13 @@ export default function CustomerProfileScreen({
         maxLength={16}
       />
       <Field label={t.email} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+      <CityPicker value={city} onChange={setCity} />
       <Field
         label={t.yourPincode}
         value={pincode}
         onChangeText={(v) => setPincode(v.replace(/\D/g, '').slice(0, 6))}
         keyboardType="number-pad"
-        placeholder="641001"
+        placeholder={pincodePlaceholder(city)}
       />
       <Field label={t.area} value={area} onChangeText={setArea} />
       <Chips

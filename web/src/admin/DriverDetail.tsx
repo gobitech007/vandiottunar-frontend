@@ -8,6 +8,7 @@ import {
   LICENCE_GROUPS,
   type DriverDetail as Detail,
   type LicenceGroup,
+  cityLabel,
 } from '../api'
 import { displayClass } from '../public/idNumbers'
 
@@ -144,6 +145,7 @@ export default function DriverDetail() {
           <dl>
             <dt>Works in</dt>
             <dd>
+              {driver.city && <strong>{cityLabel(driver.city)} · </strong>}
               {driver.home_area ?? '—'} {driver.home_pincode && `(${driver.home_pincode})`}
               {driver.home_lat != null && driver.home_lng != null && (
                 <>

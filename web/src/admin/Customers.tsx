@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { api, formatDate, type AdminCustomer } from '../api'
+import { api, cityLabel, formatDate, type AdminCustomer } from '../api'
 
 const PAGE = 25
 const NEED: Record<string, string> = { on_demand: 'Trips', job: 'Permanent driver' }
@@ -94,6 +94,7 @@ export default function Customers() {
                 <td>
                   {c.home_area ?? '—'}
                   {c.home_pincode && <span className="muted"> · {c.home_pincode}</span>}
+                  {c.city && <span className="muted"> · {cityLabel(c.city)}</span>}
                 </td>
                 <td>{c.needs.map((n) => NEED[n] ?? n).join(', ') || '—'}</td>
                 <td>{c.car_number ?? '—'}</td>

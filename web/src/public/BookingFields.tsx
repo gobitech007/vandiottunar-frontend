@@ -150,16 +150,18 @@ export default function BookingFields({ value, onChange }: { value: BookingDraft
       </fieldset>
 
       <label htmlFor="b-address">{t.pickupAddress}</label>
-      <input
-        id="b-address"
-        value={value.pickupAddress}
-        onChange={(e) => set({ pickupAddress: e.target.value })}
-        maxLength={300}
-        autoComplete="street-address"
-      />
-      <button type="button" className="btn wide" onClick={locate} disabled={locating}>
-        {locating ? t.locating : t.useMyLocation}
-      </button>
+      <div className="pickup-row">
+        <input
+          id="b-address"
+          value={value.pickupAddress}
+          onChange={(e) => set({ pickupAddress: e.target.value })}
+          maxLength={300}
+          autoComplete="street-address"
+        />
+        <button type="button" className="btn wide" onClick={locate} disabled={locating}>
+          {locating ? t.locating : t.useMyLocation}
+        </button>
+      </div>
       {value.lat != null && value.lng != null && (
         <p className="ok-text">✓ {value.lat.toFixed(5)}, {value.lng.toFixed(5)}</p>
       )}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { api, formatDate, label, type DriverStatus, type DriverSummary, type Stats } from '../api'
+import { api, cityLabel, formatDate, label, type DriverStatus, type DriverSummary, type Stats } from '../api'
 
 const TABS: { value: DriverStatus; title: string }[] = [
   { value: 'submitted', title: 'Waiting for review' },
@@ -120,6 +120,7 @@ export default function Drivers() {
                 <td>
                   {d.home_area ?? '—'}
                   {d.home_pincode && <span className="muted"> · {d.home_pincode}</span>}
+                  {d.city && <span className="muted"> · {cityLabel(d.city)}</span>}
                 </td>
                 <td>{d.experience_years != null ? `${d.experience_years} yrs` : '—'}</td>
                 <td>

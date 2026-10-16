@@ -1,7 +1,8 @@
 import * as Location from 'expo-location'
 import { useState } from 'react'
 import { Linking, Text } from 'react-native'
-import { api, type Profile } from '../api'
+import { api, cityFromPincode, pincodePlaceholder, type Profile } from '../api'
+import CityPicker from '../CityPicker'
 import { errorText, useT } from '../i18n'
 import { Button, Card, Chips, colors, ErrorText, Field, Screen, styles } from '../ui'
 
@@ -28,6 +29,7 @@ export default function LocationScreen({
       ? { lat: profile.registration_lat, lng: profile.registration_lng, accuracy: null }
       : null,
   )
+  const [city, setCity] = useState(profile.city ?? '')
   const [pincode, setPincode] = useState(profile.home_pincode ?? '')
   const [area, setArea] = useState(profile.home_area ?? '')
   const [radius, setRadius] = useState(String(profile.service_radius_km ?? 10))
@@ -52,7 +54,10 @@ export default function LocationScreen({
       // Prefill pincode/area from the phone's geocoder; the driver can change them
       try {
         const [place] = await Location.reverseGeocodeAsync({ latitude: next.lat, longitude: next.lng })
-        if (place?.postalCode && !pincode) setPincode(place.postalCode.replace(/\D/g, '').slice(0, 6))
+        const pin = place?.postalCode?.replace(/\D/g, '').slice(0, 6)
+        if (pin && !pincode) setPincode(pin)
+        const guess = pin ? cityFromPincode(pin) : null
+        if (guess && !city) setCity(guess)
         const locality = place?.district ?? place?.subregion ?? place?.city
         if (locality && !area) setArea(locality)
       } catch {
@@ -74,6 +79,7 @@ export default function LocationScreen({
         lat: fix.lat,
         lng: fix.lng,
         accuracy_m: fix.accuracy,
+        city,
         home_pincode: pincode,
         home_area: area.trim() || null,
         service_radius_km: Number(radius),
@@ -109,14 +115,15 @@ export default function LocationScreen({
           <Text style={styles.muted}>{`${fix.lat.toFixed(5)}, ${fix.lng.toFixed(5)}`}</Text>
         </Card>
       )}
+      <CityPicker value={city} onChange={setCity} />
       <Field
         label={t.pincode}
         value={pincode}
         onChangeText={(v) => setPincode(v.replace(/\D/g, '').slice(0, 6))}
         keyboardType="number-pad"
-        placeholder="641001"
+        placeholder={pincodePlaceholder(city)}
       />
-      <Field label={t.area} value={area} onChangeText={setArea} maxLength={120} placeholder="RS Puram" />
+      <Field label={t.area} value={area} onChangeText={setArea} maxLength={120} />
       <Chips
         label={t.radius}
         options={RADII}
@@ -125,7 +132,7 @@ export default function LocationScreen({
         render={(v) => `${v} km`}
       />
       <ErrorText>{error}</ErrorText>
-      <Button label={t.save} onPress={save} busy={busy} disabled={!fix || !/^[1-9]\d{5}$/.test(pincode)} />
+      <Button label={t.save} onPress={save} busy={busy} disabled={!fix || !city || !/^[1-9]\d{5}$/.test(pincode)} />
     </Screen>
   )
 }

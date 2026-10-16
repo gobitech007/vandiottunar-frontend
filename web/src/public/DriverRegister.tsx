@@ -17,6 +17,7 @@ import {
   type UserSession,
 } from '../api'
 import { useT } from '../i18n'
+import CitySelect, { pincodePlaceholder } from './CitySelect'
 import { aadhaarDigits, displayClass, formatAadhaar, maskAadhaar, validAadhaar } from './idNumbers'
 import { needsFirstDownload, readImageText } from './licenceOcr'
 import PhoneOtp from './PhoneOtp'
@@ -339,15 +340,21 @@ function ProfileStep({ profile, onDone, onBack }: { profile: DriverProfile; onDo
   return (
     <StepFrame title={t.stepProfile} onBack={onBack}>
       <form onSubmit={save}>
-        <label htmlFor="name">{t.fullName}</label>
-        <input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" maxLength={120} />
-        <label htmlFor="exp">{t.experience}</label>
-        <input
-          id="exp"
-          inputMode="numeric"
-          value={experience}
-          onChange={(e) => setExperience(e.target.value.replace(/\D/g, '').slice(0, 2))}
-        />
+        <div className="form-grid">
+          <div className="f">
+            <label htmlFor="name">{t.fullName}</label>
+            <input id="name" value={fullName} onChange={(e) => setFullName(e.target.value)} autoComplete="name" maxLength={120} />
+          </div>
+          <div className="f">
+            <label htmlFor="exp">{t.experience}</label>
+            <input
+              id="exp"
+              inputMode="numeric"
+              value={experience}
+              onChange={(e) => setExperience(e.target.value.replace(/\D/g, '').slice(0, 2))}
+            />
+          </div>
+        </div>
         <ChipGroup
           legend={t.vehicles}
           options={VEHICLES}
@@ -388,6 +395,7 @@ function LocationStep({ profile, onDone, onBack }: { profile: DriverProfile; onD
       ? { lat: profile.registration_lat, lng: profile.registration_lng, accuracy: null }
       : null,
   )
+  const [city, setCity] = useState(profile.city ?? '')
   const [pincode, setPincode] = useState(profile.home_pincode ?? '')
   const [area, setArea] = useState(profile.home_area ?? '')
   const [radius, setRadius] = useState(String(profile.service_radius_km ?? 10))
@@ -427,6 +435,7 @@ function LocationStep({ profile, onDone, onBack }: { profile: DriverProfile; onD
           lat: fix.lat,
           lng: fix.lng,
           accuracy_m: fix.accuracy,
+          city,
           home_pincode: pincode,
           home_area: area.trim() || null,
           service_radius_km: Number(radius),
@@ -455,16 +464,25 @@ function LocationStep({ profile, onDone, onBack }: { profile: DriverProfile; onD
         </p>
       )}
       <form onSubmit={save}>
-        <label htmlFor="pin">{t.pincode}</label>
-        <input
-          id="pin"
-          inputMode="numeric"
-          value={pincode}
-          onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-          placeholder="641001"
-        />
-        <label htmlFor="area">{t.area}</label>
-        <input id="area" value={area} onChange={(e) => setArea(e.target.value)} maxLength={120} placeholder="RS Puram" />
+        <div className="form-grid">
+          <div className="f span-2">
+            <CitySelect id="city" value={city} onChange={setCity} />
+          </div>
+          <div className="f">
+            <label htmlFor="pin">{t.pincode}</label>
+            <input
+              id="pin"
+              inputMode="numeric"
+              value={pincode}
+              onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder={pincodePlaceholder(city)}
+            />
+          </div>
+          <div className="f">
+            <label htmlFor="area">{t.area}</label>
+            <input id="area" value={area} onChange={(e) => setArea(e.target.value)} maxLength={120} />
+          </div>
+        </div>
         <ChipGroup
           legend={t.radius}
           options={RADII}
@@ -478,7 +496,7 @@ function LocationStep({ profile, onDone, onBack }: { profile: DriverProfile; onD
             {error}
           </p>
         )}
-        <button className="btn primary wide" disabled={!fix || !/^[1-9]\d{5}$/.test(pincode) || busy}>
+        <button className="btn primary wide" disabled={!fix || !city || !/^[1-9]\d{5}$/.test(pincode) || busy}>
           {t.save}
         </button>
       </form>

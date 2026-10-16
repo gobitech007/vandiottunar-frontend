@@ -84,6 +84,7 @@ export interface Profile {
   availability: string | null
   work_preferences: string[]
   expected_pay_note: string | null
+  city?: string | null
   home_pincode: string | null
   home_area: string | null
   service_radius_km: number
@@ -204,6 +205,7 @@ export interface CustomerProfile {
   full_name: string | null
   email: string | null
   company_name: string | null
+  city?: string | null
   home_pincode: string | null
   home_area: string | null
   needs: string[]
@@ -298,3 +300,27 @@ export interface Payment {
 export const CAR_RE = /^([A-Z]{2}\d{1,2}[A-Z]{0,3}\d{1,4}|\d{2}BH\d{4}[A-Z]{1,2})$/
 export const cleanCarNumber = (v: string) => v.toUpperCase().replace(/[\s.-]/g, '')
 export const rupees = (paise: number) => `₹${(paise / 100).toLocaleString('en-IN')}`
+
+// ---- Cities (user-service GET /cities): where people can register ----
+export interface City {
+  slug: string
+  name_en: string
+  name_ta: string
+}
+
+export const DEFAULT_CITIES: City[] = [
+  { slug: 'chennai', name_en: 'Chennai', name_ta: 'சென்னை' },
+  { slug: 'coimbatore', name_en: 'Coimbatore', name_ta: 'கோயம்புத்தூர்' },
+  { slug: 'tiruchirappalli', name_en: 'Tiruchirappalli (Trichy)', name_ta: 'திருச்சிராப்பள்ளி (திருச்சி)' },
+]
+
+const SAMPLE_PIN: Record<string, string> = { chennai: '600001', coimbatore: '641001', tiruchirappalli: '620001' }
+export const pincodePlaceholder = (city: string) => SAMPLE_PIN[city] ?? '641001'
+
+/** Best guess of the city from a pincode (used to prefill from the phone's location) */
+export function cityFromPincode(pin: string): string | null {
+  if (pin.startsWith('600')) return 'chennai'
+  if (pin.startsWith('641') || pin.startsWith('642')) return 'coimbatore'
+  if (pin.startsWith('620') || pin.startsWith('621')) return 'tiruchirappalli'
+  return null
+}

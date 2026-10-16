@@ -5,6 +5,7 @@ import { useT } from '../i18n'
 import BookingFields, { createBooking, draftReady, emptyDraft, type BookingDraft } from './BookingFields'
 import BookingPolicyBox from './BookingPolicyBox'
 import CarNumberField from './CarNumberField'
+import CitySelect, { pincodePlaceholder } from './CitySelect'
 import PhoneOtp from './PhoneOtp'
 import PublicShell from './PublicShell'
 import WrongRole from './WrongRole'
@@ -78,7 +79,7 @@ export default function CustomerRegister() {
 
   return (
     <PublicShell>
-      <div className="flow">
+      <div className={`flow ${session && isCustomer && profile ? 'form-flow' : ''}`}>
         <h1>{t.customerTitle}</h1>
         {body}
       </div>
@@ -121,6 +122,7 @@ function CustomerForm({
   const [email, setEmail] = useState(profile.email ?? '')
   const [company, setCompany] = useState(profile.company_name ?? '')
   const [carNumber, setCarNumber] = useState(profile.car_number ?? '')
+  const [city, setCity] = useState(profile.city ?? '')
   const [pincode, setPincode] = useState(profile.home_pincode ?? '')
   const [area, setArea] = useState(profile.home_area ?? '')
   const [needs, setNeeds] = useState<string[]>(profile.needs)
@@ -133,6 +135,7 @@ function CustomerForm({
   const carOk = carNumber.trim() ? validCarNumber(carNumber) : isEmployer
   const complete =
     name.trim().length >= 2 &&
+    Boolean(city) &&
     /^[1-9]\d{5}$/.test(pincode) &&
     carOk &&
     (!isEmployer || company.trim()) &&
@@ -148,6 +151,7 @@ function CustomerForm({
       const body: Record<string, unknown> = {
         full_name: name.trim(),
         preferred_language: lang,
+        city,
         home_pincode: pincode,
         home_area: area.trim() || null,
         needs: withBooking ? [...new Set([...needs, draft.bookingType])] : needs,
@@ -171,85 +175,108 @@ function CustomerForm({
 
   return (
     <form className="card" onSubmit={save}>
-      <label htmlFor="c-name">{t.yourName}</label>
-      <input id="c-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={120} />
-      {isEmployer && (
-        <>
-          <label htmlFor="c-company">{t.companyName}</label>
-          <input
-            id="c-company"
-            value={company}
-            onChange={(e) => setCompany(e.target.value)}
-            autoComplete="organization"
-            maxLength={160}
+      <div className="reg-layout">
+        <div>
+          <h2 className="panel-title">{t.yourDetails}</h2>
+          <div className="form-grid">
+            <div className="f">
+              <label htmlFor="c-name">{t.yourName}</label>
+              <input id="c-name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" maxLength={120} />
+            </div>
+            {isEmployer && (
+              <div className="f">
+                <label htmlFor="c-company">{t.companyName}</label>
+                <input
+                  id="c-company"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                  autoComplete="organization"
+                  maxLength={160}
+                />
+              </div>
+            )}
+            <div className="f">
+              <label htmlFor="c-email">{t.email}</label>
+              <input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
+            </div>
+            <div className="f span-2">
+              <CarNumberField
+                id="c-car"
+                label={isEmployer ? t.carNumberOptional : t.carNumber}
+                value={carNumber}
+                onChange={setCarNumber}
+                invalid={Boolean(carNumber.trim()) && !validCarNumber(carNumber)}
+              />
+            </div>
+            <div className="f">
+              <CitySelect id="c-city" value={city} onChange={setCity} />
+            </div>
+            <div className="f">
+              <label htmlFor="c-pin">{t.yourPincode}</label>
+              <input
+                id="c-pin"
+                inputMode="numeric"
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                autoComplete="postal-code"
+                placeholder={pincodePlaceholder(city)}
+              />
+            </div>
+            <div className="f">
+              <label htmlFor="c-area">{t.yourArea}</label>
+              <input id="c-area" value={area} onChange={(e) => setArea(e.target.value)} maxLength={120} />
+            </div>
+            <div className="f">
+              <label htmlFor="c-vehicle">{t.vehicleNote}</label>
+              <input
+                id="c-vehicle"
+                value={vehicle}
+                onChange={(e) => setVehicle(e.target.value)}
+                placeholder={t.vehicleNotePh}
+                maxLength={120}
+              />
+            </div>
+          </div>
+          <BookingPolicyBox
+            accepted={agreed}
+            onChange={setAgreed}
+            updated={!profile.policy_accepted && Boolean(profile.policy_accepted_at)}
           />
-        </>
-      )}
-      <CarNumberField
-        id="c-car"
-        label={isEmployer ? t.carNumberOptional : t.carNumber}
-        value={carNumber}
-        onChange={setCarNumber}
-        invalid={Boolean(carNumber.trim()) && !validCarNumber(carNumber)}
-      />
-      <label htmlFor="c-email">{t.email}</label>
-      <input id="c-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
-      <label htmlFor="c-pin">{t.yourPincode}</label>
-      <input
-        id="c-pin"
-        inputMode="numeric"
-        value={pincode}
-        onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-        autoComplete="postal-code"
-        placeholder="641001"
-      />
-      <label htmlFor="c-area">{t.yourArea}</label>
-      <input id="c-area" value={area} onChange={(e) => setArea(e.target.value)} maxLength={120} />
+        </div>
 
-      {withBooking ? (
-        <BookingFields value={draft} onChange={setDraft} />
-      ) : (
-        <fieldset className="chips">
-          <legend>{t.needs}</legend>
-          {NEEDS.map((n) => {
-            const on = needs.includes(n)
-            return (
-              <button
-                type="button"
-                key={n}
-                role="checkbox"
-                aria-checked={on}
-                className={`chip ${on ? 'on' : ''}`}
-                onClick={() => setNeeds((l) => (on ? l.filter((x) => x !== n) : [...l, n]))}
-              >
-                {t.needLabels[n]}
-              </button>
-            )
-          })}
-        </fieldset>
-      )}
-
-      <label htmlFor="c-vehicle">{t.vehicleNote}</label>
-      <input
-        id="c-vehicle"
-        value={vehicle}
-        onChange={(e) => setVehicle(e.target.value)}
-        placeholder={t.vehicleNotePh}
-        maxLength={120}
-      />
-      <BookingPolicyBox
-        accepted={agreed}
-        onChange={setAgreed}
-        updated={!profile.policy_accepted && Boolean(profile.policy_accepted_at)}
-      />
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-      <button className="btn primary wide" disabled={!complete || busy}>
-        {withBooking ? t.register : t.save}
-      </button>
+        <div>
+          {withBooking ? (
+            <BookingFields value={draft} onChange={setDraft} />
+          ) : (
+            <fieldset className="chips">
+              <legend>{t.needs}</legend>
+              {NEEDS.map((n) => {
+                const on = needs.includes(n)
+                return (
+                  <button
+                    type="button"
+                    key={n}
+                    role="checkbox"
+                    aria-checked={on}
+                    className={`chip ${on ? 'on' : ''}`}
+                    onClick={() => setNeeds((l) => (on ? l.filter((x) => x !== n) : [...l, n]))}
+                  >
+                    {t.needLabels[n]}
+                  </button>
+                )
+              })}
+            </fieldset>
+          )}
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="btn primary wide" disabled={!complete || busy}>
+            {withBooking ? t.register : t.save}
+          </button>
+        </div>
+      </div>
     </form>
   )
 }
